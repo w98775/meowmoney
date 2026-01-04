@@ -462,7 +462,18 @@
                     const idx = investments.value.findIndex(r => r.id === editingStockId.value);
                     if (idx !== -1) {
                         const original = investments.value[idx];
-                        investments.value.splice(idx, 1, { ...original, ...invForm.value });
+                        const updatedInv = { ...original, ...invForm.value };
+                        investments.value.splice(idx, 1, updatedInv);
+                        
+                        // Fix: Send update action to Google Sheet
+                        if(googleSheetUrl.value && !isOffline.value) {
+                            fetch(googleSheetUrl.value, { 
+                                method: 'POST', 
+                                mode: 'no-cors', 
+                                headers: {'Content-Type': 'application/json'}, 
+                                body: JSON.stringify({ ...updatedInv, type: 'investment', action: 'update' }) 
+                            }).catch(e => console.error(e));
+                        }
                     }
                     cancelStockEdit();
                 };
