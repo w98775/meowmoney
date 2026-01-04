@@ -52,16 +52,8 @@
             theme: {
                 extend: {
                     colors: {
-                        stone: {
-                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
-                            700: '#44403c', 800: '#292524', 900: '#1c1917',
-                        },
-                        earth: {
-                            light: '#FDFCF8',
-                            accent: '#C26D53', // Terracotta
-                            green: '#4A6741', // Forest Green
-                            dark: '#3E3C38',
-                        }
+                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1', 700: '#44403c', 800: '#292524', 900: '#1c1917' },
+                        earth: { light: '#FDFCF8', accent: '#C26D53', green: '#4A6741', dark: '#3E3C38' }
                     }
                 }
             }
@@ -355,6 +347,19 @@
                     const offset = d.getTimezoneOffset() * 60000;
                     return new Date(d.getTime() - offset).toISOString().split('T')[0];
                 };
+                
+                // --- Date Helper for Current Month Default ---
+                const getMonthRange = () => {
+                    const date = new Date();
+                    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                    
+                    const toDateInputStr = (d) => {
+                         const offset = d.getTimezoneOffset() * 60000;
+                         return new Date(d.getTime() - offset).toISOString().split('T')[0];
+                    };
+                    return { start: toDateInputStr(firstDay), end: toDateInputStr(lastDay) };
+                };
 
                 const activeTab = ref('accounting'); 
                 const currentDate = ref(getLocalISOString());
@@ -389,6 +394,68 @@
                 const showSettings = ref(false);
                 const googleSheetUrl = ref('https://script.google.com/macros/s/AKfycbxFqYIQfDc8HS86wTfBrSeONbcnpMja6alK53xE9FQ8FXIbMHeGAEZjKdvhj3ABhD0l/exec');
 
+                const processFixedExpenses = async () => {
+                    const now = new Date();
+                    // Current YYYY-MM
+                    const currentYear = now.getFullYear();
+                    const currentMonth = now.getMonth() + 1;
+                    const currentMonthPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+                    // Previous YYYY-MM
+                    const prevDate = new Date(currentYear, currentMonth - 2, 1); 
+                    const prevYear = prevDate.getFullYear();
+                    const prevMonth = prevDate.getMonth() + 1;
+                    const prevMonthPrefix = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
+                    // Find fixed expenses in previous month
+                    const prevFixedRecs = accountingRecords.value.filter(r => 
+                        r.isFixed && r.date.startsWith(prevMonthPrefix)
+                    );
+
+                    // Find fixed expenses in current month
+                    const currentFixedRecs = accountingRecords.value.filter(r => 
+                        r.isFixed && r.date.startsWith(currentMonthPrefix)
+                    );
+
+                    let addedCount = 0;
+
+                    for (const rec of prevFixedRecs) {
+                        // Check if this specific fixed expense exists in current month
+                        const exists = currentFixedRecs.some(curr => 
+                            curr.category === rec.category && 
+                            curr.amount === rec.amount && 
+                            curr.note === rec.note
+                        );
+
+                        if (!exists) {
+                            // Generate new record for the 1st of current month
+                            const newRec = {
+                                ...rec,
+                                id: Date.now().toString() + Math.random().toString().slice(2,5), // Unique ID
+                                date: `${currentMonthPrefix}-01`,
+                                type: 'accounting' // Ensure type is present for GAS
+                            };
+                            
+                            // Add to local state (to top of list)
+                            accountingRecords.value.unshift(newRec);
+                            addedCount++;
+
+                            // Sync to Google Sheet
+                            if (googleSheetUrl.value && !isOffline.value) {
+                                 await fetch(googleSheetUrl.value, { 
+                                    method: 'POST', 
+                                    mode: 'no-cors', 
+                                    headers: {'Content-Type': 'application/json'}, 
+                                    body: JSON.stringify(newRec) 
+                                }).catch(e => console.error(e));
+                            }
+                        }
+                    }
+                    if (addedCount > 0) {
+                        console.log(`Auto-generated ${addedCount} fixed expenses from previous month.`);
+                    }
+                };
+
                 const fetchData = async () => {
                     if (!googleSheetUrl.value) return;
                     isLoading.value = true;
@@ -410,6 +477,9 @@
                             if (Array.isArray(data.bullpen)) bullpen.value = data.bullpen.reverse();
                             if (Array.isArray(data.investments)) investments.value = data.investments.reverse();
                         }
+                        // Check and generate fixed expenses after data load
+                        await processFixedExpenses();
+
                     } catch (e) {
                         console.error("Fetch error", e);
                         isOffline.value = true;
@@ -630,12 +700,11 @@
 
                 const isExpanded = ref(false);
                 const searchQuery = ref('');
-                const d = new Date();
-                const defaultEnd = getLocalISOString();
-                d.setMonth(d.getMonth() - 1);
-                const defaultStart = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                // Initialize default dates with current month range
+                const { start: defaultStart, end: defaultEnd } = getMonthRange();
                 const filterStartDate = ref(defaultStart);
                 const filterEndDate = ref(defaultEnd);
+
                 const toggleExpand = () => isExpanded.value = !isExpanded.value;
                 const visibleRecords = computed(() => {
                     let recs = accountingRecords.value;
