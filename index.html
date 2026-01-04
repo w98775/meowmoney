@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- iOS Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>MeowMoney 智慧理財</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* Modal Scale Animation */
+        .scale-enter-active, .scale-leave-active { transition: all 0.2s ease; }
+        .scale-enter-from, .scale-leave-to { opacity: 0; transform: scale(0.95); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f5f5f4; }
+        ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+
+        /* iOS Safe Area Utilities */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+
+        /* Hide Number Input Spinner Arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stone: {
+                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
+                            700: '#44403c', 800: '#292524', 900: '#1c1917',
+                        },
+                        earth: {
+                            light: '#FDFCF8',
+                            accent: '#C26D53', // Terracotta
+                            green: '#4A6741', // Forest Green
+                            dark: '#3E3C38',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-earth-light text-stone-800 min-h-[100dvh] pb-safe">
+
+    <div id="app" class="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto relative min-h-[100dvh] flex flex-col transition-all duration-300 bg-earth-light">
+        
+        <!-- Header -->
+        <header class="sticky top-0 z-30 bg-earth-light/95 backdrop-blur-sm border-b border-stone-200 px-5 py-4 flex justify-between items-center shadow-sm pt-safe">
+            <h1 class="text-xl font-bold tracking-wide text-earth-dark flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-earth-accent"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path><path d="M8.5 8.5v.01"></path><path d="M16 15v.01"></path></svg>
+                MeowMoney
+            </h1>
+            <div class="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1 rounded-full border border-stone-200">
+                {{ currentDate }}
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="px-4 mt-4 sticky top-[60px] z-20 md:static md:mt-6">
+            <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-stone-200 flex gap-1 md:w-2/3 md:mx-auto lg:w-1/2">
+                <button 
+                    v-for="tab in tabs" 
+                    :key="tab.id"
+                    @click="activeTab = tab.id"
+                    class="flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl text-xs md:text-sm font-medium transition-all duration-300 relative overflow-hidden active:scale-95 transform"
+                    :class="activeTab === tab.id ? 'text-stone-800 bg-stone-100 shadow-inner' : 'text-stone-400 hover:bg-stone-50 hover:text-stone-600'"
+                >
+                    <component :is="tab.icon" class="w-5 h-5 mb-1" :stroke-width="activeTab === tab.id ? 2.5 : 1.5"></component>
+                    {{ tab.label }}
+                    <div v-if="activeTab === tab.id" class="absolute bottom-0 w-8 h-1 bg-earth-accent rounded-t-full"></div>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 px-4 py-6 overflow-x-hidden">
+            
+            <!-- 1. ACCOUNTING SECTION -->
+            <transition name="fade" mode="out-in">
+                <div v-if="activeTab === 'accounting'" key="accounting" class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    
+                    <!-- Left Column: Settings, Income & Chart -->
+                    <div class="md:col-span-5 space-y-5">
+                        
+                        <!-- Settings Toggle -->
+                        <div class="flex justify-end">
+                            <button @click="showSettings = !showSettings" class="text-[10px] md:text-xs flex items-center gap-1 text-stone-400 hover:text-earth-accent transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                Google Sheet 設定
+                            </button>
+                        </div>
+
+                        <div v-if="showSettings" class="bg-stone-100 p-3 rounded-xl border border-stone-200 text-xs animate-fade-in">
+                            <label class="block font-bold text-stone-600 mb-1">Apps Script Web App URL</label>
+                            <input v-model="googleSheetUrl" type="text" placeholder="https://script.google.com/macros/s/..." class="w-full p-2 rounded border border-stone-300 mb-2">
+                            <p class="text-stone-400 text-[10px]">設定後，記帳與牛棚紀錄將自動發送至此網址。</p>
+                        </div>
+
+                        <!-- Income & Chart Card -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
+                            <!-- Daily Income Input -->
+                            <div class="flex justify-between items-end mb-4 border-b border-stone-100 pb-4">
+                                <div>
+                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月收入 (可編輯)</label>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-stone-400 text-lg">$</span>
+                                        <input type="number" v-model="dailyIncome" class="text-2xl font-mono font-bold text-stone-700 w-32 focus:outline-none focus:border-b focus:border-earth-accent placeholder-stone-200 appearance-none" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當日結餘</label>
+                                    <p class="text-xl font-mono font-bold" :class="dailyBalance >= 0 ? 'text-earth-green' : 'text-earth-accent'">{{ formatCurrency(dailyBalance) }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Chart Visualization -->
+                            <div class="relative h-48 w-full flex items-center justify-center">
+                                <canvas id="expenseChart"></canvas>
+                                <div v-if="accountingRecords.length === 0" class="absolute inset-0 flex items-center justify-center text-stone-300 text-xs">
+                                    尚無支出資料
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input Card (Add Only) -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-earth-accent"></div>
+                            <div class="flex justify-between items-center mb-3 pl-2">
+                                <h2 class="text-sm md:text-base font-bold text-stone-700 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12h10"/><path d="M11 16h10"/><path d="M11 20h10"/><path d="M7 20h.01"/><path d="M7 16h.01"/><path d="M7 12h.01"/><path d="M22 10v6a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-6l-5-5h20z"/></svg>
+                                    記一筆
+                                </h2>
+                                <input type="date" v-model="accForm.date" class="text-[10px] md:text-xs text-stone-500 font-mono bg-stone-50 border-none rounded focus:ring-1 focus:ring-earth-accent outline-none cursor-pointer">
+                            </div>
+                            <!-- Form content -->
+                            <div class="space-y-3 pl-2">
+                                <div class="flex gap-2">
+                                    <div class="w-1/3">
+                                        <label class="text-[10px] md:text-xs font-bold text-stone-500 uppercase block mb-0.5">類別</label>
+                                        <select v-if="!isAddingCategory" v-model="accForm.category" @change="checkCategory" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent focus:ring-1 text-stone-700">
+                                            <option v-for="c in categories" :value="c">{{c}}</option>
+                                            <option value="__NEW__">+ 新增類別</option>
+                                        </select>
+                                        <div v-else class="flex gap-1">
+                                            <input ref="newCatInput" v-model="newCategoryName" placeholder="名稱" class="w-full bg-white border border-earth-accent rounded-lg px-2 py-1.5 text-xs outline-none">
+                                            <button @click="confirmNewCategory" class="bg-earth-accent text-white px-1.5 rounded-lg text-xs">✓</button>
+                                        </div>
+                                    </div>
+                                    <div class="w-2/3">
+                                        <label class="text-[10px] md:text-xs font-bold text-stone-500 uppercase block mb-0.5">金額</label>
+                                        <input type="number" v-model="accForm.amount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded-lg pl-6 pr-2 py-1.5 text-sm font-mono font-bold text-stone-800 outline-none focus:border-earth-accent focus:ring-1">
+                                    </div>
+                                </div>
+                                <!-- Summary Input -->
+                                <div>
+                                    <input type="text" v-model="accForm.summary" placeholder="摘要 (內容說明)..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent">
+                                </div>
+                                <div class="bg-stone-50 p-2 rounded-lg border border-stone-100">
+                                    <div class="flex gap-2 mb-2">
+                                        <label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="cash" class="accent-stone-700"> 現金</label>
+                                        <label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="card" class="accent-earth-accent"> 信用卡</label>
+                                    </div>
+                                    <div v-if="accForm.paymentType === 'card'" class="mb-2">
+                                        <input type="text" v-model="accForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-earth-accent">
+                                    </div>
+                                    <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer">
+                                        <input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費 (自動延續)</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="text" v-model="accForm.note" placeholder="備註..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent mb-3">
+                                    <!-- Full width prominent button -->
+                                    <button @click="addAccounting" class="w-full bg-stone-800 hover:bg-black text-white py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center justify-center gap-2 active:scale-95 transform">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        新增紀錄
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Record List -->
+                    <div class="md:col-span-7 space-y-3">
+                        <div class="flex items-center justify-between px-1">
+                            <h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider">近期紀錄</h3>
+                            <button @click="toggleExpand" class="text-xs md:text-sm text-earth-accent font-bold hover:underline">
+                                {{ isExpanded ? '收合' : '展開/搜尋' }}
+                            </button>
+                        </div>
+
+                        <!-- Search & Filter -->
+                        <div v-if="isExpanded" class="bg-stone-100 p-3 rounded-xl space-y-2 animate-fade-in border border-stone-200">
+                            <div class="flex gap-2">
+                                <input type="text" v-model="searchQuery" placeholder="搜尋備註或類別..." class="flex-1 bg-white border border-stone-300 rounded px-2 py-1 text-xs md:text-sm">
+                            </div>
+                            <div class="flex gap-2 items-center text-xs md:text-sm text-stone-500">
+                                <span>日期:</span>
+                                <input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5">
+                                <span>-</span>
+                                <input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5">
+                            </div>
+                        </div>
+                        
+                        <div v-if="visibleRecords.length === 0" class="text-center py-6 border-2 border-dashed border-stone-200 rounded-xl">
+                            <p class="text-stone-400 text-sm">目前沒有記帳資料</p>
+                        </div>
+
+                        <div v-for="rec in visibleRecords" :key="rec.id" class="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex items-center justify-between group hover:border-stone-300 transition-all hover:shadow-md">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-stone-600 bg-stone-100 border border-stone-200 relative">
+                                    {{ rec.category[0] }}
+                                    <div v-if="rec.isFixed" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-earth-green rounded-full border border-white"></div>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-700 flex items-center gap-1">
+                                        {{ rec.category }}
+                                        <span v-if="rec.summary" class="text-stone-600">· {{ rec.summary }}</span>
+                                        <span v-if="rec.note" class="text-xs font-normal text-stone-400"> ({{ rec.note }})</span>
+                                    </div>
+                                    <div class="text-[10px] text-stone-400 font-mono flex items-center gap-1">
+                                        {{ rec.date }}
+                                        <span v-if="rec.bankName" class="text-earth-accent bg-orange-50 px-1 rounded">{{rec.bankName}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Adjusted gap and padding for better touch targets -->
+                            <div class="flex items-center gap-5">
+                                <span class="font-mono font-bold text-stone-700 text-sm mr-1">-{{ rec.amount }}</span>
+                                <button @click="openEditModal(rec)" class="text-stone-300 hover:text-earth-green transition-colors p-2 rounded-full hover:bg-stone-50 active:scale-95" title="編輯">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button @click="deleteAccounting(rec.id)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- EDIT MODAL -->
+            <transition name="scale">
+                <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" @click.self="closeEditModal">
+                    <div class="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+                        <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+                            <h3 class="text-lg font-bold text-stone-700 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-earth-green"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                編輯紀錄
+                            </h3>
+                            <button @click="closeEditModal" class="text-stone-400 hover:text-stone-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="text-xs font-bold text-stone-500 uppercase block mb-1">日期</label><input type="date" v-model="editForm.date" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-earth-green focus:ring-1"></div>
+                                <div><label class="text-xs font-bold text-stone-500 uppercase block mb-1">金額</label><input type="number" v-model="editForm.amount" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm font-mono font-bold text-stone-800 outline-none focus:border-earth-green focus:ring-1"></div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-stone-500 uppercase block mb-1">類別</label>
+                                <div class="flex gap-2">
+                                    <select v-if="!isAddingCategoryEdit" v-model="editForm.category" @change="checkCategoryEdit" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-earth-green focus:ring-1">
+                                        <option v-for="c in categories" :value="c">{{c}}</option>
+                                        <option value="__NEW__">+ 新增類別</option>
+                                    </select>
+                                    <div v-else class="flex gap-2 w-full"><input ref="newCatInputEdit" v-model="newCategoryNameEdit" placeholder="新類別名稱" class="flex-1 bg-white border border-earth-green rounded-lg px-3 py-2 text-sm outline-none"><button @click="confirmNewCategoryEdit" class="bg-earth-green text-white px-3 rounded-lg text-sm">✓</button></div>
+                                </div>
+                            </div>
+                            <!-- Summary Input Edit -->
+                            <div>
+                                <label class="text-xs font-bold text-stone-500 uppercase block mb-1">摘要</label>
+                                <input type="text" v-model="editForm.summary" placeholder="摘要 (內容說明)..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-earth-green focus:ring-1">
+                            </div>
+                            <div class="bg-stone-50 p-3 rounded-lg border border-stone-100">
+                                <div class="flex gap-3 mb-2"><label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" v-model="editForm.paymentType" value="cash" class="accent-stone-700"> 現金</label><label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" v-model="editForm.paymentType" value="card" class="accent-earth-green"> 信用卡</label></div>
+                                <div v-if="editForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="editForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1.5 text-sm outline-none focus:border-earth-green"></div>
+                                <label class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="editForm.isFixed" class="accent-earth-green w-4 h-4"> <span>固定花費 (自動延續)</span></label>
+                            </div>
+                            <div><label class="text-xs font-bold text-stone-500 uppercase block mb-1">備註</label><input type="text" v-model="editForm.note" placeholder="備註..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-earth-green focus:ring-1"></div>
+                        </div>
+                        <div class="flex gap-3 pt-2">
+                            <button @click="closeEditModal" class="flex-1 bg-stone-200 hover:bg-stone-300 text-stone-600 py-2.5 rounded-xl text-sm font-bold transition-colors">取消</button>
+                            <button @click="updateAccounting" class="flex-1 bg-earth-green hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg transition-colors">確認修改</button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 2. STOCK INVESTMENT (Cleared Data) -->
+            <transition name="fade" mode="out-in">
+                <div v-if="activeTab === 'stock-inv'" key="stock-inv" class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-5 space-y-5">
+                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4" :class="{'ring-2 ring-earth-accent/20': editingStockId}">
+                            <!-- Border color logic for edit mode -->
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5" :class="editingStockId ? 'bg-earth-green' : 'bg-earth-accent'"></div>
+                            
+                            <h3 class="text-xs md:text-sm font-bold text-stone-700 uppercase tracking-wider mb-3 flex items-center gap-2 pl-2">
+                                 <svg v-if="!editingStockId" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+                                 <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-earth-green"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                 {{ editingStockId ? '編輯投資紀錄' : '新增投資紀錄' }}
+                            </h3>
+                            <div class="grid grid-cols-4 gap-2 mb-2 pl-2">
+                                <input type="text" v-model="invForm.code" @blur="onCodeBlur('inv')" placeholder="代號" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none">
+                                <input type="text" v-model="invForm.name" placeholder="名稱 (可自行輸入)" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mb-2 pl-2">
+                                 <div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">交易日期</label><input type="date" v-model="invForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div>
+                                 <div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">手續費</label><input type="number" v-model="invForm.fee" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 mb-3 pl-2">
+                                <div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="invForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700"></div>
+                                <div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="invForm.sellAvg" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div>
+                                <div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">股數</label><input type="number" v-model="invForm.shares" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div>
+                            </div>
+                            <div class="flex gap-2 pl-2">
+                                 <button v-if="editingStockId" @click="cancelStockEdit" class="w-1/3 bg-stone-200 hover:bg-stone-300 text-stone-600 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">取消</button>
+                                 <button v-else @click="resetInvForm" class="w-1/3 bg-stone-100 hover:bg-stone-200 text-stone-500 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">重置</button>
+                                 
+                                 <button @click="editingStockId ? updateInvestment() : addInvestment()" class="w-2/3 text-white py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95" :class="editingStockId ? 'bg-earth-green hover:bg-green-700' : 'bg-stone-700 hover:bg-stone-800'">
+                                     {{ editingStockId ? '確認更新' : '加入投資組合' }}
+                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-7 space-y-3">
+                         <div v-if="investments.length === 0" class="text-center py-10 opacity-60"><p class="text-xs text-stone-400">尚無投資項目</p></div>
+                         <div v-for="(item, idx) in investments" :key="item.id" class="bg-white rounded-xl p-4 shadow-sm border border-stone-200 relative hover:shadow-md transition-all" :class="{'ring-2 ring-earth-green/20': editingStockId === item.id}">
+                             <div class="flex justify-between items-start mb-3 border-b border-stone-100 pb-2">
+                                 <div><div class="flex items-center gap-2">
+                                     <span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ item.code }}</span>
+                                     <span class="text-sm md:text-base font-bold text-stone-800">{{ item.name }}</span>
+                                     <!-- New Tag Logic -->
+                                     <span v-if="!item.sellAvg || Number(item.sellAvg) === 0" class="bg-blue-100 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded">存股</span>
+                                     <span v-else class="bg-green-100 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded">已售</span>
+                                 </div><div class="text-[10px] md:text-xs text-stone-400 font-mono mt-1">{{ item.date }} · 手續費 ${{ item.fee }}</div></div>
+                                 
+                                 <!-- Updated Price Section: Clickable -->
+                                 <div class="text-right cursor-pointer group" @click="updatePrice(item)" title="點擊更新現價">
+                                     <div class="text-xs md:text-sm font-bold text-stone-600 flex items-center justify-end gap-1 group-hover:text-earth-accent transition-colors">
+                                         現價: {{ item.currentPrice }}
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                     </div>
+                                     <div class="text-[10px] md:text-xs font-mono border-b border-transparent group-hover:border-dashed group-hover:border-stone-300" :class="getPriceDiffClass(item)">
+                                         昨收 {{ item.prevClose }} ({{ getPriceDiffPercent(item) }}%)
+                                     </div>
+                                 </div>
+                             </div>
+                             <div class="grid grid-cols-3 gap-2 text-center">
+                                 <div class="bg-stone-50 rounded p-1"><div class="text-[9px] md:text-xs text-stone-400">買均</div><div class="text-xs md:text-sm font-mono font-bold">{{ item.buyAvg }}</div></div>
+                                 <div class="bg-stone-50 rounded p-1"><div class="text-[9px] md:text-xs text-stone-400">賣均</div><div class="text-xs md:text-sm font-mono font-bold">{{ item.sellAvg || '-' }}</div></div>
+                                 <div class="bg-stone-50 rounded p-1 border border-stone-100">
+                                     <div class="text-[9px] md:text-xs text-stone-400">{{ (!item.sellAvg || Number(item.sellAvg) === 0) ? '帳面損益' : '已實現獲利' }}</div>
+                                     <div class="text-xs md:text-sm font-mono font-bold" :class="getProfitClass(calculateStockProfit(item))">{{ calculateStockProfit(item) }}</div>
+                                 </div>
+                             </div>
+                             
+                             <!-- Footer: Edit & Delete Buttons -->
+                             <div class="flex justify-end gap-5 mt-2 pt-2 border-t border-stone-50">
+                                 <button @click="editInvestment(item)" class="text-stone-300 hover:text-earth-green transition-colors p-2 rounded-full hover:bg-stone-50 active:scale-95" title="編輯">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                 </button>
+                                 <button @click="deleteInvestment(idx)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                 </button>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 3. BULLPEN -->
+            <transition name="fade" mode="out-in">
+                <div v-if="activeTab === 'bullpen'" key="bullpen" class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-5 space-y-5">
+                        <div class="bg-stone-800 rounded-2xl p-4 text-stone-100 shadow-lg flex justify-between items-center">
+                            <div><p class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">已投入成本 (可編輯)</p><div class="flex items-center gap-1"><span class="text-stone-500">$</span><input type="number" v-model="investedCapital" class="bg-transparent border-b border-stone-600 w-24 text-xl md:text-2xl font-mono font-bold text-white focus:outline-none focus:border-earth-accent transition-colors appearance-none"></div></div>
+                            <div class="text-right"><p class="text-[10px] md:text-xs font-bold text-earth-accent uppercase tracking-wider mb-1">目前已賺 (總獲利)</p><p class="text-xl md:text-2xl font-mono font-bold" :class="bullpenStats.totalProfit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ formatCurrency(bullpenStats.totalProfit) }}</p></div>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
+                            <h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5l-2-2H9L7 5 3 9v11h18V9l-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg> 本日牛棚</h3>
+                            <div class="grid grid-cols-4 gap-2 mb-2"><input type="text" v-model="bullForm.code" @blur="onCodeBlur('bull')" placeholder="代碼" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none"><input type="text" v-model="bullForm.name" placeholder="名稱 (可手動輸入)" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none"></div>
+                            <div class="grid grid-cols-2 gap-2 mb-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">日期</label><input type="date" v-model="bullForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">投入金額</label><input type="number" v-model="bullForm.investedAmount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
+                            <div class="grid grid-cols-2 gap-2 mb-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="bullForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="bullForm.sellAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div></div>
+                             <div class="grid grid-cols-2 gap-2 mb-3"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">平均利潤</label><input type="number" v-model="bullForm.avgProfit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">獲利 (總額)</label><input type="number" v-model="bullForm.profit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
+                            <button @click="addBullpen" class="w-full bg-stone-700 hover:bg-stone-800 text-white py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">加入本日牛棚</button>
+                        </div>
+                    </div>
+                    <div class="md:col-span-7 space-y-3">
+                        <div v-if="bullpen.length === 0" class="text-center py-10 opacity-60"><p class="text-xs text-stone-400">本日牛棚目前空空的</p></div>
+                        <div v-for="(stock, idx) in bullpen" :key="stock.id" class="bg-white rounded-xl p-3 shadow-sm border border-stone-100 relative group hover:shadow-md transition-all">
+                             <div class="flex justify-between items-center mb-2 border-b border-stone-100 pb-2">
+                                <div class="flex items-center gap-2"><span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ stock.code }}</span><span class="text-sm md:text-base font-bold text-stone-700">{{ stock.name }}</span><span class="text-[10px] md:text-xs text-stone-400 ml-1">{{ stock.date }}</span></div>
+                                <button @click="deleteBullpen(idx)" class="text-[10px] md:text-xs text-stone-300 hover:text-earth-accent active:scale-95 p-1">刪除</button>
+                             </div>
+                             <div class="grid grid-cols-2 gap-2 text-center text-xs md:text-sm mb-2"><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">投入金額</span><span class="font-mono font-bold">{{ formatCurrency(stock.investedAmount) }}</span></div><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">實際投報率</span><span class="font-mono font-bold" :class="Number(stock.roi) >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.roi }}%</span></div></div>
+                             <div class="grid grid-cols-4 gap-2 text-center text-xs md:text-sm"><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">買均</div><div class="font-mono">{{stock.buyAvg}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">賣均</div><div class="font-mono">{{stock.sellAvg || '-'}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">平均利潤</div><div class="font-mono">{{ stock.avgProfit }}%</div></div><div class="bg-stone-50 p-1 rounded border border-stone-100"><div class="text-[9px] md:text-xs text-stone-400 scale-90">獲利</div><div class="font-mono font-bold" :class="stock.profit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.profit }}</div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+        </main>
+    </div>
+
+    <!-- Vue Application Logic -->
+    <script>
+        const { createApp, ref, computed, nextTick, watch } = Vue;
+
+        createApp({
+            setup() {
+                // Get Local Date String (Fix for Timezone Issues)
+                const getLocalISOString = () => {
+                    const d = new Date();
+                    const offset = d.getTimezoneOffset() * 60000;
+                    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+                };
+
+                const activeTab = ref('accounting'); 
+                const currentDate = ref(getLocalISOString());
+                const todayDateStr = new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', weekday: 'short' });
+
+                // Icons (Templates)
+                const IconBook = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>` };
+                const IconTrending = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>` };
+                const IconCow = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5l-2-2H9L7 5 3 9v11h18V9l-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>` };
+
+                const tabs = [
+                    { id: 'accounting', label: '日常記帳', icon: IconBook },
+                    { id: 'stock-inv', label: '股票投資', icon: IconTrending },
+                    { id: 'bullpen', label: '牛棚', icon: IconCow }
+                ];
+
+                const stockDB = {
+                    '2330': { name: '台積電', price: 580, prevClose: 576 },
+                    '0050': { name: '元大台灣50', price: 128.5, prevClose: 129 },
+                    '00878': { name: '國泰永續高股息', price: 20.5, prevClose: 20.4 },
+                    '00919': { name: '群益台灣精選高息', price: 21.2, prevClose: 21.0 },
+                    '2317': { name: '鴻海', price: 105, prevClose: 104 },
+                    '2603': { name: '長榮', price: 155, prevClose: 150 }
+                };
+
+                // --- 1. Accounting Logic ---
+                const categories = ref(['餐費', '交通', '購物', '娛樂', '居住', '其他']);
+                const isAddingCategory = ref(false);
+                const newCategoryName = ref('');
+                const newCatInput = ref(null);
+                const accForm = ref({ date: currentDate.value, category: '餐費', amount: null, summary: '', note: '', paymentType: 'cash', bankName: '', isFixed: false });
+                
+                // Cleared Data
+                const accountingRecords = ref([]);
+                const dailyIncome = ref(null);
+
+                // Chart Logic
+                let expenseChart = null;
+
+                const updateChart = () => {
+                    if (activeTab.value !== 'accounting') return;
+                    
+                    nextTick(() => {
+                        const ctx = document.getElementById('expenseChart');
+                        if (!ctx) return;
+
+                        // Aggregation
+                        const totals = {};
+                        categories.value.forEach(c => totals[c] = 0);
+                        // Also include any custom categories in existing records
+                        accountingRecords.value.forEach(r => {
+                            if (!totals[r.category]) totals[r.category] = 0;
+                            totals[r.category] += Number(r.amount);
+                        });
+
+                        // Filter out zero categories for cleaner chart
+                        const labels = Object.keys(totals).filter(k => totals[k] > 0);
+                        const data = labels.map(k => totals[k]);
+
+                        if (expenseChart) {
+                            expenseChart.destroy();
+                        }
+
+                        if (data.length === 0) return; // Don't draw empty chart
+
+                        expenseChart = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: [
+                                        '#FCA5A5', '#93C5FD', '#D8B4FE', '#FDE047', '#86EFAC', '#CBD5E1',
+                                        '#FDBA74', '#6EE7B7' // Extra colors
+                                    ],
+                                    borderWidth: 0,
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                                },
+                                layout: { padding: 10 }
+                            }
+                        });
+                    });
+                };
+
+                // Watchers for Chart
+                watch(accountingRecords, updateChart, { deep: true });
+                watch(activeTab, () => { if(activeTab.value === 'accounting') updateChart(); });
+
+                // Daily Balance
+                const dailyBalance = computed(() => {
+                    const income = Number(dailyIncome.value || 0);
+                    const expense = accountingRecords.value.reduce((sum, r) => sum + Number(r.amount), 0);
+                    return income - expense;
+                });
+
+                // Edit Logic
+                const showEditModal = ref(false);
+                const editingId = ref(null);
+                const editForm = ref({ date: '', category: '', amount: null, summary: '', note: '', paymentType: 'cash', bankName: '', isFixed: false });
+                const isAddingCategoryEdit = ref(false);
+                const newCategoryNameEdit = ref('');
+                const newCatInputEdit = ref(null);
+
+                // Filter
+                const isExpanded = ref(false);
+                const searchQuery = ref('');
+                
+                // Initialize date range using local time to avoid timezone bugs
+                const d = new Date();
+                const defaultEnd = getLocalISOString();
+                d.setMonth(d.getMonth() - 1);
+                const defaultStart = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                
+                const filterStartDate = ref(defaultStart);
+                const filterEndDate = ref(defaultEnd);
+                const showSettings = ref(false);
+                const googleSheetUrl = ref('https://script.google.com/macros/s/AKfycbxFqYIQfDc8HS86wTfBrSeONbcnpMja6alK53xE9FQ8FXIbMHeGAEZjKdvhj3ABhD0l/exec');
+
+                const toggleExpand = () => isExpanded.value = !isExpanded.value;
+
+                const visibleRecords = computed(() => {
+                    let recs = accountingRecords.value;
+                    if (!isExpanded.value) return recs.slice(0, 3);
+                    return recs.filter(r => {
+                        const inDate = r.date >= filterStartDate.value && r.date <= filterEndDate.value;
+                        const matchQuery = r.note.includes(searchQuery.value) || r.category.includes(searchQuery.value);
+                        return inDate && matchQuery;
+                    });
+                });
+
+                const checkCategory = () => {
+                    if (accForm.value.category === '__NEW__') { isAddingCategory.value = true; accForm.value.category = ''; nextTick(() => newCatInput.value.focus()); }
+                };
+                const confirmNewCategory = () => {
+                    if (newCategoryName.value) { categories.value.push(newCategoryName.value); accForm.value.category = newCategoryName.value; } else { accForm.value.category = '餐費'; }
+                    isAddingCategory.value = false; newCategoryName.value = '';
+                };
+                
+                const checkCategoryEdit = () => { if (editForm.value.category === '__NEW__') { isAddingCategoryEdit.value = true; editForm.value.category = ''; nextTick(() => newCatInputEdit.value.focus()); } };
+                const confirmNewCategoryEdit = () => { if (newCategoryNameEdit.value) { categories.value.push(newCategoryNameEdit.value); editForm.value.category = newCategoryNameEdit.value; } else { editForm.value.category = '餐費'; } isAddingCategoryEdit.value = false; newCategoryNameEdit.value = ''; };
+
+                const openEditModal = (rec) => {
+                    editingId.value = rec.id;
+                    editForm.value = { ...rec };
+                    showEditModal.value = true;
+                };
+                const closeEditModal = () => { showEditModal.value = false; editingId.value = null; isAddingCategoryEdit.value = false; };
+
+                const updateAccounting = () => {
+                    const idx = accountingRecords.value.findIndex(r => r.id === editingId.value);
+                    if (idx !== -1) {
+                         const updatedRecord = { ...accountingRecords.value[idx], ...editForm.value, amount: Number(editForm.value.amount) };
+                         accountingRecords.value.splice(idx, 1, updatedRecord);
+                        if(googleSheetUrl.value) {
+                            fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...updatedRecord, action: 'update'}) }).catch(e => console.error(e));
+                        }
+                    }
+                    closeEditModal();
+                };
+
+                const resetAccForm = () => {
+                    accForm.value = { date: currentDate.value, category: '餐費', amount: null, summary: '', note: '', paymentType: 'cash', bankName: '', isFixed: false };
+                };
+
+                const addAccounting = () => {
+                    // Alert validation added
+                    if (accForm.value.amount === null || accForm.value.amount === '') {
+                        alert('請輸入金額');
+                        return;
+                    }
+                    const newRecord = { id: Date.now(), ...accForm.value, amount: Number(accForm.value.amount), type: 'accounting' };
+                    accountingRecords.value.unshift(newRecord);
+                    if(googleSheetUrl.value) {
+                        fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newRecord) }).catch(e => console.error(e));
+                    }
+                    // Reset form but keep date
+                    const prevDate = accForm.value.date;
+                    resetAccForm();
+                    accForm.value.date = prevDate;
+                };
+
+                const deleteAccounting = (id) => {
+                    if(confirm('刪除此紀錄？')) {
+                        const idx = accountingRecords.value.findIndex(r => r.id === id);
+                        if(idx !== -1) accountingRecords.value.splice(idx, 1);
+                    }
+                };
+
+                // --- 2. Investment ---
+                const invForm = ref({ code: '', name: '', date: currentDate.value, buyAvg: null, sellAvg: null, shares: null, fee: null });
+                const investments = ref([]); // Cleared
+                const editingStockId = ref(null);
+
+                const addInvestment = () => {
+                    if(!invForm.value.code || !invForm.value.shares) return;
+                    const dbData = stockDB[invForm.value.code] || { name: '自訂', price: Number(invForm.value.buyAvg), prevClose: Number(invForm.value.buyAvg) };
+                    investments.value.push({ id: Date.now(), ...invForm.value, name: invForm.value.name || dbData.name, currentPrice: dbData.price, prevClose: dbData.prevClose });
+                    resetInvForm();
+                };
+                
+                const updateInvestment = () => {
+                    const idx = investments.value.findIndex(r => r.id === editingStockId.value);
+                    if (idx !== -1) {
+                        // Preserve stock data that is not in the form (like currentPrice, prevClose)
+                        const original = investments.value[idx];
+                        investments.value.splice(idx, 1, { 
+                            ...original,
+                            ...invForm.value
+                        });
+                    }
+                    cancelStockEdit();
+                };
+
+                const editInvestment = (item) => {
+                    editingStockId.value = item.id;
+                    invForm.value = { ...item }; // Copy data to form
+                    // Scroll to top or form
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+
+                const cancelStockEdit = () => {
+                    editingStockId.value = null;
+                    resetInvForm();
+                };
+
+                const resetInvForm = () => { invForm.value = { code: '', name: '', date: currentDate.value, buyAvg: null, sellAvg: null, shares: null, fee: null }; };
+                const deleteInvestment = (idx) => investments.value.splice(idx, 1);
+                const getPriceDiffClass = (item) => item.currentPrice >= item.prevClose ? 'text-earth-accent' : 'text-earth-green';
+                const getPriceDiffPercent = (item) => ((item.currentPrice - item.prevClose) / item.prevClose * 100).toFixed(2);
+
+                const updatePrice = (item) => {
+                    const newPrice = prompt(`請輸入 ${item.name} (${item.code}) 的最新現價:`, item.currentPrice);
+                    if (newPrice !== null && !isNaN(newPrice)) {
+                        item.currentPrice = Number(newPrice);
+                        // Optional: ask for prev close
+                        const newPrev = prompt(`請輸入 ${item.name} 的昨日收盤價 (用於計算漲跌):`, item.prevClose);
+                        if (newPrev !== null && !isNaN(newPrev)) {
+                            item.prevClose = Number(newPrev);
+                        }
+                    }
+                };
+
+                const calculateStockProfit = (item) => {
+                    // Logic: If sellAvg is present, use it (Realized). Else use currentPrice (Unrealized/Holding).
+                    const sellPrice = (item.sellAvg && Number(item.sellAvg) > 0) ? Number(item.sellAvg) : item.currentPrice;
+                    const buyCost = item.buyAvg * item.shares;
+                    const revenue = sellPrice * item.shares;
+                    const fee = Number(item.fee) || 0;
+                    return Math.round(revenue - buyCost - fee);
+                };
+
+                // --- 3. Bullpen ---
+                const investedCapital = ref(30900); 
+                const bullForm = ref({ code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null });
+                const bullpen = ref([]); 
+
+                const bullpenStats = computed(() => {
+                    let totalProfit = 0;
+                    bullpen.value.forEach(item => totalProfit += Number(item.profit || 0));
+                    return { totalProfit };
+                });
+
+                const addBullpen = () => {
+                    if(!bullForm.value.code || !bullForm.value.investedAmount) return;
+                    const profit = Number(bullForm.value.profit || 0);
+                    const invested = Number(bullForm.value.investedAmount);
+                    const roi = invested > 0 ? ((profit / invested) * 100).toFixed(2) : '0.00';
+                    const newBullpenItem = { id: Date.now(), ...bullForm.value, name: bullForm.value.name || '自訂', roi, type: 'bullpen' };
+                    bullpen.value.push(newBullpenItem);
+                    if(googleSheetUrl.value) {
+                        fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newBullpenItem) }).catch(e => console.error(e));
+                    }
+                    bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null };
+                };
+                const deleteBullpen = (idx) => bullpen.value.splice(idx, 1);
+
+                const onCodeBlur = (type) => {
+                    const form = type === 'inv' ? invForm : bullForm;
+                    const code = form.value.code;
+                    if(stockDB[code]) form.value.name = stockDB[code].name;
+                };
+
+                const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val);
+                const calculateProfit = (item) => Math.round((item.currentPrice - item.buyAvg) * item.shares); // Kept for accounting/bullpen if needed, but Stock uses calculateStockProfit
+                const getProfitClass = (val) => val > 0 ? 'text-earth-accent' : (val < 0 ? 'text-earth-green' : 'text-stone-400');
+
+                return {
+                    activeTab, tabs, currentDate, todayDateStr, showSettings, googleSheetUrl,
+                    // Accounting
+                    categories, isAddingCategory, newCategoryName, newCatInput, checkCategory, confirmNewCategory,
+                    accForm, accountingRecords, visibleRecords, addAccounting, deleteAccounting, dailyIncome, dailyBalance,
+                    // Edit Logic
+                    showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit,
+                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate,
+                    // Investment
+                    invForm, investments, addInvestment, deleteInvestment, getPriceDiffClass, getPriceDiffPercent, resetInvForm, calculateStockProfit, updatePrice, 
+                    editingStockId, editInvestment, updateInvestment, cancelStockEdit, // Export stock edit functions
+                    // Bullpen
+                    investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen,
+                    // Shared
+                    onCodeBlur, formatCurrency, calculateProfit, getProfitClass
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
