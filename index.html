@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>MeowMoney 智慧理財</title>
-    <!-- Tailwind CSS (No CORS needed usually, but good practice) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 with crossorigin -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js" crossorigin="anonymous"></script>
@@ -19,15 +19,32 @@
         body { font-family: 'Noto Sans TC', sans-serif; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* Modal Scale Animation */
         .scale-enter-active, .scale-leave-active { transition: all 0.2s ease; }
         .scale-enter-from, .scale-leave-to { opacity: 0; transform: scale(0.95); }
+
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f5f5f4; }
         ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+
+        /* iOS Safe Area Utilities */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .pt-safe { padding-top: env(safe-area-inset-top); }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+
+        /* Hide Number Input Spinner Arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+        
+        /* Loading Overlay */
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 60; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
     </style>
     <script>
@@ -35,8 +52,16 @@
             theme: {
                 extend: {
                     colors: {
-                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1', 700: '#44403c', 800: '#292524', 900: '#1c1917' },
-                        earth: { light: '#FDFCF8', accent: '#C26D53', green: '#4A6741', dark: '#3E3C38' }
+                        stone: {
+                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
+                            700: '#44403c', 800: '#292524', 900: '#1c1917',
+                        },
+                        earth: {
+                            light: '#FDFCF8',
+                            accent: '#C26D53', // Terracotta
+                            green: '#4A6741', // Forest Green
+                            dark: '#3E3C38',
+                        }
                     }
                 }
             }
@@ -188,8 +213,14 @@
                          <div v-for="(item, idx) in investments" :key="item.id" class="bg-white rounded-xl p-4 shadow-sm border border-stone-200 relative hover:shadow-md transition-all" :class="{'ring-2 ring-earth-green/20': editingStockId === item.id}">
                              <div class="flex justify-between items-start mb-3 border-b border-stone-100 pb-2">
                                  <div><div class="flex items-center gap-2"><span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ item.code }}</span><span class="text-sm md:text-base font-bold text-stone-800">{{ item.name }}</span><span v-if="!item.sellAvg || Number(item.sellAvg) === 0" class="bg-blue-100 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded">存股</span><span v-else class="bg-green-100 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded">已售</span></div><div class="text-[10px] md:text-xs text-stone-400 font-mono mt-1">{{ item.date }} · 手續費 ${{ item.fee }}</div></div>
-                                 <div class="text-right">
-                                     <div class="text-xs md:text-sm font-bold text-stone-600">昨收: {{ item.prevClose }}</div>
+                                 <div class="text-right cursor-pointer group" @click="updatePrice(item)" title="點擊更新現價">
+                                     <div class="text-xs md:text-sm font-bold text-stone-600 flex items-center justify-end gap-1 group-hover:text-earth-accent transition-colors">
+                                         現價: {{ item.currentPrice }}
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                     </div>
+                                     <div class="text-[10px] md:text-xs font-mono border-b border-transparent group-hover:border-dashed group-hover:border-stone-300" :class="getPriceDiffClass(item)">
+                                         昨收 {{ item.prevClose }} ({{ getPriceDiffPercent(item) }}%)
+                                     </div>
                                  </div>
                              </div>
                              <div class="grid grid-cols-3 gap-2 text-center">
@@ -214,24 +245,46 @@
                             <div><p class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">已投入成本 (可編輯)</p><div class="flex items-center gap-1"><span class="text-stone-500">$</span><input type="number" v-model="investedCapital" class="bg-transparent border-b border-stone-600 w-24 text-xl md:text-2xl font-mono font-bold text-white focus:outline-none focus:border-earth-accent transition-colors appearance-none"></div></div>
                             <div class="text-right"><p class="text-[10px] md:text-xs font-bold text-earth-accent uppercase tracking-wider mb-1">目前已賺 (總獲利)</p><p class="text-xl md:text-2xl font-mono font-bold" :class="bullpenStats.totalProfit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ formatCurrency(bullpenStats.totalProfit) }}</p></div>
                         </div>
-                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
-                            <h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5l-2-2H9L7 5 3 9v11h18V9l-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg> 本日牛棚</h3>
-                            <div class="grid grid-cols-4 gap-2 mb-2"><input type="text" v-model="bullForm.code" @blur="onCodeBlur('bull')" placeholder="代碼" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none"><input type="text" v-model="bullForm.name" placeholder="名稱 (可手動輸入)" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none"></div>
-                            <div class="grid grid-cols-2 gap-2 mb-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">日期</label><input type="date" v-model="bullForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">投入金額</label><input type="number" v-model="bullForm.investedAmount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
-                            <div class="grid grid-cols-2 gap-2 mb-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="bullForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="bullForm.sellAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div></div>
-                             <div class="grid grid-cols-2 gap-2 mb-3"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">平均利潤</label><input type="number" v-model="bullForm.avgProfit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">獲利 (總額)</label><input type="number" v-model="bullForm.profit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
-                            <button @click="addBullpen" class="w-full bg-stone-700 hover:bg-stone-800 text-white py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">加入本日牛棚</button>
+                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4" :class="{'ring-2 ring-earth-accent/20': editingBullpenId}">
+                            <!-- Edit indicator -->
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5" :class="editingBullpenId ? 'bg-earth-green' : 'bg-earth-accent'"></div>
+
+                            <h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-2 pl-2">
+                                <svg v-if="!editingBullpenId" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5l-2-2H9L7 5 3 9v11h18V9l-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-earth-green"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                {{ editingBullpenId ? '編輯牛棚紀錄' : '本日牛棚' }}
+                            </h3>
+                            <div class="grid grid-cols-4 gap-2 mb-2 pl-2"><input type="text" v-model="bullForm.code" @blur="onCodeBlur('bull')" placeholder="代碼" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none"><input type="text" v-model="bullForm.name" placeholder="名稱 (可手動輸入)" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none"></div>
+                            <div class="grid grid-cols-2 gap-2 mb-2 pl-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">日期</label><input type="date" v-model="bullForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">投入金額</label><input type="number" v-model="bullForm.investedAmount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
+                            <div class="grid grid-cols-2 gap-2 mb-2 pl-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="bullForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="bullForm.sellAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div></div>
+                             <div class="grid grid-cols-2 gap-2 mb-3 pl-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">平均利潤</label><input type="number" v-model="bullForm.avgProfit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">獲利 (總額)</label><input type="number" v-model="bullForm.profit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
+                            
+                            <div class="flex gap-2 pl-2">
+                                <button v-if="editingBullpenId" @click="cancelBullpenEdit" class="w-1/3 bg-stone-200 hover:bg-stone-300 text-stone-600 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">取消</button>
+                                <button @click="editingBullpenId ? updateBullpen() : addBullpen()" class="w-full bg-stone-700 hover:bg-stone-800 text-white py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95" :class="editingBullpenId ? 'w-2/3 bg-earth-green hover:bg-green-700' : 'w-full'">
+                                    {{ editingBullpenId ? '確認更新' : '加入本日牛棚' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="md:col-span-7 space-y-3">
                         <div v-if="bullpen.length === 0" class="text-center py-10 opacity-60"><p class="text-xs text-stone-400">本日牛棚目前空空的</p></div>
-                        <div v-for="(stock, idx) in bullpen" :key="stock.id" class="bg-white rounded-xl p-3 shadow-sm border border-stone-100 relative group hover:shadow-md transition-all">
+                        <div v-for="(stock, idx) in bullpen" :key="stock.id" class="bg-white rounded-xl p-3 shadow-sm border border-stone-100 relative group hover:shadow-md transition-all" :class="{'ring-2 ring-earth-green/20': editingBullpenId === stock.id}">
                              <div class="flex justify-between items-center mb-2 border-b border-stone-100 pb-2">
                                 <div class="flex items-center gap-2"><span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ stock.code }}</span><span class="text-sm md:text-base font-bold text-stone-700">{{ stock.name }}</span><span class="text-[10px] md:text-xs text-stone-400 ml-1">{{ stock.date }}</span></div>
-                                <button @click="deleteBullpen(idx)" class="text-[10px] md:text-xs text-stone-300 hover:text-earth-accent active:scale-95 p-1">刪除</button>
-                             </div>
+                            </div>
                              <div class="grid grid-cols-2 gap-2 text-center text-xs md:text-sm mb-2"><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">投入金額</span><span class="font-mono font-bold">{{ formatCurrency(stock.investedAmount) }}</span></div><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">實際投報率</span><span class="font-mono font-bold" :class="Number(stock.roi) >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.roi }}%</span></div></div>
                              <div class="grid grid-cols-4 gap-2 text-center text-xs md:text-sm"><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">買均</div><div class="font-mono">{{stock.buyAvg}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">賣均</div><div class="font-mono">{{stock.sellAvg || '-'}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">平均利潤</div><div class="font-mono">{{ stock.avgProfit }}%</div></div><div class="bg-stone-50 p-1 rounded border border-stone-100"><div class="text-[9px] md:text-xs text-stone-400 scale-90">獲利</div><div class="font-mono font-bold" :class="stock.profit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.profit }}</div></div></div>
+                             
+                             <!-- Bullpen Footer Actions -->
+                             <div class="flex justify-end gap-5 mt-2 pt-2 border-t border-stone-50">
+                                 <button @click="editBullpen(stock)" class="text-stone-300 hover:text-earth-green transition-colors p-2 rounded-full hover:bg-stone-50 active:scale-95" title="編輯">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                 </button>
+                                 <button @click="deleteBullpen(idx)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                 </button>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -330,6 +383,8 @@
                 const investedCapital = ref(30900); 
                 const bullForm = ref({ code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null });
                 const bullpen = ref([]); 
+                // Add editingBullpenId ref
+                const editingBullpenId = ref(null);
 
                 const showSettings = ref(false);
                 const googleSheetUrl = ref('https://script.google.com/macros/s/AKfycbxFqYIQfDc8HS86wTfBrSeONbcnpMja6alK53xE9FQ8FXIbMHeGAEZjKdvhj3ABhD0l/exec');
@@ -450,6 +505,7 @@
                     }
                 };
 
+                // --- Investment Logic ---
                 const addInvestment = () => {
                     if(!invForm.value.code || !invForm.value.shares) return;
                     const dbData = stockDB[invForm.value.code] || { name: '自訂', price: Number(invForm.value.buyAvg), prevClose: Number(invForm.value.buyAvg) };
@@ -517,6 +573,53 @@
                     if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newBullpenItem) }).catch(e => console.error(e)); }
                     bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null };
                 };
+                
+                // Add updateBullpen logic
+                const updateBullpen = () => {
+                    const idx = bullpen.value.findIndex(r => r.id === editingBullpenId.value);
+                    if (idx !== -1) {
+                        const original = bullpen.value[idx];
+                        
+                        // Recalculate ROI
+                        const profit = Number(bullForm.value.profit || 0);
+                        const invested = Number(bullForm.value.investedAmount);
+                        const roi = invested > 0 ? ((profit / invested) * 100).toFixed(2) : '0.00';
+
+                        const updatedBullpen = { 
+                            ...original, 
+                            ...bullForm.value,
+                            roi, // Update ROI
+                            type: 'bullpen', // Ensure type is set
+                            action: 'update' // Set action to update
+                        };
+                        
+                        bullpen.value.splice(idx, 1, updatedBullpen);
+                        
+                        if(googleSheetUrl.value && !isOffline.value) {
+                            fetch(googleSheetUrl.value, { 
+                                method: 'POST', 
+                                mode: 'no-cors', 
+                                headers: {'Content-Type': 'application/json'}, 
+                                body: JSON.stringify(updatedBullpen) 
+                            }).catch(e => console.error(e));
+                        }
+                    }
+                    cancelBullpenEdit();
+                };
+
+                // Add editBullpen logic
+                const editBullpen = (item) => {
+                    editingBullpenId.value = item.id;
+                    bullForm.value = { ...item };
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+
+                // Add cancelBullpenEdit logic
+                const cancelBullpenEdit = () => {
+                    editingBullpenId.value = null;
+                    bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null };
+                };
+
                 const deleteBullpen = (idx) => {
                     if(confirm('刪除？')) {
                         const item = bullpen.value[idx];
@@ -558,6 +661,8 @@
                     isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate,
                     invForm, investments, addInvestment, deleteInvestment, getPriceDiffClass, getPriceDiffPercent, resetInvForm, calculateStockProfit, editingStockId, editInvestment, updateInvestment, cancelStockEdit, updatePrice,
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen,
+                    // Export new Bullpen logic
+                    editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     onCodeBlur, formatCurrency, getProfitClass
                 };
             }
