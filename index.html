@@ -115,7 +115,7 @@
                     <div class="md:col-span-5 space-y-5">
                         <div class="flex justify-end">
                             <button @click="showSettings = !showSettings" class="text-[10px] md:text-xs flex items-center gap-1 text-stone-400 hover:text-earth-accent transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                 Google Sheet 設定
                             </button>
                         </div>
@@ -128,10 +128,14 @@
                         <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
                             <div class="flex justify-between items-end mb-4 border-b border-stone-100 pb-4">
                                 <div>
-                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月收入</label>
+                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月總收入 (預設+新增)</label>
                                     <div class="flex items-center gap-1">
                                         <span class="text-stone-400 text-lg">$</span>
-                                        <input type="number" v-model="dailyIncome" class="text-2xl font-mono font-bold text-stone-700 w-32 focus:outline-none focus:border-b focus:border-earth-accent placeholder-stone-200 appearance-none" placeholder="0">
+                                        <span class="text-2xl font-mono font-bold text-stone-700">{{ formatCurrency(totalMonthlyIncome) }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <span class="text-[9px] text-stone-400">預設底薪:</span>
+                                        <input type="number" v-model="baseIncome" class="text-[10px] w-16 bg-stone-50 border-b border-stone-300 focus:outline-none focus:border-earth-accent text-stone-500">
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -141,7 +145,7 @@
                             </div>
                             <div class="relative h-48 w-full flex items-center justify-center">
                                 <canvas id="expenseChart"></canvas>
-                                <div v-if="accountingRecords.length === 0" class="absolute inset-0 flex items-center justify-center text-stone-300 text-xs">尚無支出資料</div>
+                                <div v-if="expenseRecordsCount === 0" class="absolute inset-0 flex items-center justify-center text-stone-300 text-xs">尚無支出資料</div>
                             </div>
                         </div>
 
@@ -494,8 +498,10 @@
                                     if (rec.category && rec.category.endsWith('(收入)')) {
                                         rec.type = 'income';
                                         rec.category = rec.category.replace(' (收入)', '');
+                                        rec.amount = Math.abs(rec.amount); // Ensure local income is positive
                                     } else {
                                         rec.type = 'expense';
+                                        rec.amount = Math.abs(rec.amount); // Ensure local expense magnitude is positive
                                     }
                                     return rec;
                                 });
@@ -598,6 +604,9 @@
                         const recordToSend = { ...updatedRecord };
                         if (recordToSend.type === 'income') {
                             recordToSend.category = recordToSend.category + ' (收入)';
+                        } else {
+                            // Expense -> negative for sheet
+                            recordToSend.amount = -Math.abs(recordToSend.amount);
                         }
 
                         if(googleSheetUrl.value && !isOffline.value) {
@@ -627,6 +636,9 @@
                     const recordToSend = { ...newRecord, type: 'accounting' }; // Set type for GAS here
                     if (accForm.value.type === 'income') {
                         recordToSend.category = recordToSend.category + ' (收入)';
+                    } else {
+                        // Expense -> negative for sheet
+                        recordToSend.amount = -Math.abs(recordToSend.amount);
                     }
                     
                     if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(recordToSend) }).catch(e => console.error(e)); }
