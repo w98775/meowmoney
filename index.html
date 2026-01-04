@@ -186,10 +186,18 @@
                         <div v-if="isExpanded" class="bg-stone-100 p-3 rounded-xl space-y-2 animate-fade-in border border-stone-200">
                             <div class="flex gap-2"><input type="text" v-model="searchQuery" placeholder="搜尋備註或類別..." class="flex-1 bg-white border border-stone-300 rounded px-2 py-1 text-xs md:text-sm"></div>
                             <div class="flex gap-2 items-center text-xs md:text-sm text-stone-500"><span>日期:</span><input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"><span>-</span><input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"></div>
-                            <div class="flex items-center gap-2 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
+                            <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterFixed" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { hideFixed = false; filterGeneral = false; }" class="accent-earth-green w-4 h-4">
                                     只顯示固定帳單
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
+                                    <input type="checkbox" v-model="hideFixed" @change="if(hideFixed) { filterFixed = false; filterGeneral = false; }" class="accent-earth-green w-4 h-4">
+                                    不顯示固定消費
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
+                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; hideFixed = false; }" class="accent-earth-green w-4 h-4">
+                                    只顯示一般消費
                                 </label>
                             </div>
                         </div>
@@ -350,7 +358,6 @@
                     return new Date(d.getTime() - offset).toISOString().split('T')[0];
                 };
                 
-                // --- Date Helper for Current Month Default ---
                 const getMonthRange = () => {
                     const date = new Date();
                     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -373,7 +380,7 @@
                 const tabs = [ { id: 'accounting', label: '日常記帳', icon: IconBook }, { id: 'bullpen', label: '牛棚', icon: IconCow } ];
                 const stockDB = { '2330': { name: '台積電', price: 580, prevClose: 576 }, '0050': { name: '元大台灣50', price: 128.5, prevClose: 129 }, '00878': { name: '國泰永續高股息', price: 20.5, prevClose: 20.4 }, '00919': { name: '群益台灣精選高息', price: 21.2, prevClose: 21.0 }, '2317': { name: '鴻海', price: 105, prevClose: 104 }, '2603': { name: '長榮', price: 155, prevClose: 150 } };
 
-                const expenseCategories = ref(['餐費', '交通', '購物', '娛樂', '居住', '其他']);
+                const expenseCategories = ref(['餐費', '交通', '購物', '娛樂', '居住', '慈善', '家人', '生活', '保險', '其他']);
                 const incomeCategories = ref(['薪資', '加班費', '獎金', '投資', '其他']);
                 
                 const isAddingCategory = ref(false);
@@ -494,14 +501,21 @@
                         if (data) {
                             if (Array.isArray(data.accounting)) {
                                 accountingRecords.value = data.accounting.filter(rec => rec && rec.date).reverse().map(rec => {
+                                    // Safety check to prevent Script Error on filter
+                                    rec.note = (rec.note || '').toString();
+                                    rec.category = (rec.category || '未分類').toString();
+                                    rec.summary = (rec.summary || '').toString();
+                                    rec.bankName = (rec.bankName || '').toString();
+                                    rec.amount = Number(rec.amount) || 0;
+
                                     // Restore type from category name
-                                    if (rec.category && rec.category.endsWith('(收入)')) {
+                                    if (rec.category.endsWith('(收入)')) {
                                         rec.type = 'income';
                                         rec.category = rec.category.replace(' (收入)', '');
-                                        rec.amount = Math.abs(rec.amount); // Ensure local income is positive
+                                        rec.amount = Math.abs(rec.amount); 
                                     } else {
                                         rec.type = 'expense';
-                                        rec.amount = Math.abs(rec.amount); // Ensure local expense magnitude is positive
+                                        rec.amount = Math.abs(rec.amount);
                                     }
                                     return rec;
                                 });
@@ -704,20 +718,41 @@
                 const filterStartDate = ref(defaultStart);
                 const filterEndDate = ref(defaultEnd);
                 const filterFixed = ref(false);
+                const hideFixed = ref(false);
+                const filterGeneral = ref(false);
 
                 const toggleExpand = () => isExpanded.value = !isExpanded.value;
                 
-                // Computed for filtered records
+                // Computed for filtered records (Enhanced Safety)
                 const visibleRecords = computed(() => {
                     let recs = accountingRecords.value;
                     if (!isExpanded.value) return recs.slice(0, 3);
                     
                     return recs.filter(r => {
-                        const inDate = r.date >= filterStartDate.value && r.date <= filterEndDate.value;
-                        const matchQuery = r.note.includes(searchQuery.value) || r.category.includes(searchQuery.value) || (r.summary && r.summary.includes(searchQuery.value));
-                        const matchFixed = filterFixed.value ? r.isFixed : true;
+                        // Safety first: check r exists
+                        if (!r) return false;
                         
-                        return inDate && matchQuery && matchFixed;
+                        const inDate = r.date >= filterStartDate.value && r.date <= filterEndDate.value;
+                        
+                        // Strict string conversion for search to avoid crashes
+                        const noteStr = (r.note || '').toString();
+                        const catStr = (r.category || '').toString();
+                        const sumStr = (r.summary || '').toString();
+                        const query = (searchQuery.value || '').toString();
+                        
+                        const matchQuery = noteStr.includes(query) || catStr.includes(query) || sumStr.includes(query);
+                        
+                        // Filter Logic
+                        let matchType = true;
+                        if (filterFixed.value) {
+                            matchType = r.isFixed;
+                        } else if (hideFixed.value) {
+                            matchType = !r.isFixed;
+                        } else if (filterGeneral.value) {
+                            matchType = r.type === 'expense' && !r.isFixed;
+                        }
+                        
+                        return inDate && matchQuery && matchType;
                     });
                 });
                 
@@ -751,7 +786,7 @@
                     categories, isAddingCategory, newCategoryName, newCatInput, checkCategory, confirmNewCategory, currentCategories, currentEditCategories,
                     accForm, accountingRecords, visibleRecords, visibleTotalAmount, addAccounting, deleteAccounting, dailyIncome, dailyBalance, baseIncome, totalMonthlyIncome,
                     showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit, setRecordType,
-                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, expenseRecordsCount,
+                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, hideFixed, filterGeneral, expenseRecordsCount,
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     onCodeBlur, formatCurrency, getProfitClass
                 };
