@@ -502,16 +502,13 @@
                         if (data) {
                             if (Array.isArray(data.accounting)) {
                                 accountingRecords.value = data.accounting.filter(rec => rec && rec.date).reverse().map(rec => {
-                                    // Safety check to prevent Script Error on filter
                                     rec.note = (rec.note || '').toString();
                                     rec.category = (rec.category || '未分類').toString();
                                     rec.summary = (rec.summary || '').toString();
                                     rec.bankName = (rec.bankName || '').toString();
                                     rec.amount = Number(rec.amount) || 0;
-                                    // Assume GAS sends this field, or default to false
                                     rec.isCountInThisMonth = rec.isCountInThisMonth === true || rec.isCountInThisMonth === '是';
 
-                                    // Restore type from category name
                                     if (rec.category.endsWith('(收入)')) {
                                         rec.type = 'income';
                                         rec.category = rec.category.replace(' (收入)', '');
@@ -523,7 +520,21 @@
                                     return rec;
                                 });
                             }
-                            if (Array.isArray(data.bullpen)) bullpen.value = data.bullpen.reverse();
+                            if (Array.isArray(data.bullpen)) {
+                                bullpen.value = data.bullpen.reverse().map(item => {
+                                    // Fix: Auto-correct percentage decimals from legacy sheet data
+                                    // If value is small (e.g. 0.0367 instead of 3.67), multiply by 100
+                                    // Threshold 0.9 is used because profit can be < 1%, but usually entered as e.g. 3.5
+                                    // If it's strictly a sheet decimal conversion (0.0xxx), this helps.
+                                    if (Math.abs(item.avgProfit) < 0.9 && item.avgProfit !== 0) {
+                                        item.avgProfit = parseFloat((item.avgProfit * 100).toFixed(2));
+                                    }
+                                    if (Math.abs(item.roi) < 0.9 && item.roi !== 0) {
+                                        item.roi = parseFloat((item.roi * 100).toFixed(2));
+                                    }
+                                    return item;
+                                });
+                            }
                         }
                         await processFixedExpenses();
 
