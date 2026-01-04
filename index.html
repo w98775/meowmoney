@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MeowMoney 智慧理財</title>
+    <title>MeowMoney</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 with crossorigin -->
@@ -113,10 +113,22 @@
             <transition name="fade" mode="out-in">
                 <div v-if="activeTab === 'accounting'" key="accounting" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-5 space-y-5">
+                        <!-- Settings Toggle (Hidden) -->
+                        <!-- 
+                        <div class="flex justify-end"> ... </div> 
+                        -->
+                        
+                        <!-- Settings Panel (Hidden if showSettings false) -->
+                        <div v-if="showSettings" class="bg-stone-100 p-3 rounded-xl border border-stone-200 text-xs animate-fade-in">
+                            <label class="block font-bold text-stone-600 mb-1">Apps Script Web App URL</label>
+                            <input v-model="googleSheetUrl" type="text" class="w-full p-2 rounded border border-stone-300 mb-2">
+                            <p class="text-[10px] text-red-400 mt-1" v-if="isOffline">無法連線，請確認 Apps Script 部署權限是否設為「任何人 (Anyone)」。</p>
+                        </div>
+
                         <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
                             <div class="flex justify-between items-end mb-4 border-b border-stone-100 pb-4">
                                 <div>
-                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月收入</label>
+                                    <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月收入 (可編輯)</label>
                                     <div class="flex items-center gap-1">
                                         <span class="text-stone-400 text-lg">$</span>
                                         <input type="number" v-model="dailyIncome" class="text-2xl font-mono font-bold text-stone-700 w-32 focus:outline-none focus:border-b focus:border-earth-accent placeholder-stone-200 appearance-none" placeholder="0">
@@ -158,7 +170,27 @@
 
                     <div class="md:col-span-7 space-y-3">
                         <div class="flex items-center justify-between px-1"><h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider">近期紀錄</h3><button @click="toggleExpand" class="text-xs md:text-sm text-earth-accent font-bold hover:underline">{{ isExpanded ? '收合' : '展開/搜尋' }}</button></div>
-                        <div v-if="isExpanded" class="bg-stone-100 p-3 rounded-xl space-y-2 animate-fade-in border border-stone-200"><div class="flex gap-2"><input type="text" v-model="searchQuery" placeholder="搜尋備註或類別..." class="flex-1 bg-white border border-stone-300 rounded px-2 py-1 text-xs md:text-sm"></div><div class="flex gap-2 items-center text-xs md:text-sm text-stone-500"><span>日期:</span><input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"><span>-</span><input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"></div></div>
+                        
+                        <!-- Search & Filter -->
+                        <div v-if="isExpanded" class="bg-stone-100 p-3 rounded-xl space-y-2 animate-fade-in border border-stone-200">
+                            <div class="flex gap-2">
+                                <input type="text" v-model="searchQuery" placeholder="搜尋備註或類別..." class="flex-1 bg-white border border-stone-300 rounded px-2 py-1 text-xs md:text-sm">
+                            </div>
+                            <div class="flex gap-2 items-center text-xs md:text-sm text-stone-500">
+                                <span>日期:</span>
+                                <input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5">
+                                <span>-</span>
+                                <input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5">
+                            </div>
+                            <!-- Fixed Expense Filter -->
+                            <div class="flex items-center gap-2 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
+                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
+                                    <input type="checkbox" v-model="filterFixed" class="accent-earth-green w-4 h-4">
+                                    只顯示固定帳單
+                                </label>
+                            </div>
+                        </div>
+                        
                         <div v-if="visibleRecords.length === 0" class="text-center py-6 border-2 border-dashed border-stone-200 rounded-xl"><p class="text-stone-400 text-sm">目前沒有記帳資料</p></div>
                         <div v-for="rec in visibleRecords" :key="rec.id" class="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex items-center justify-between group hover:border-stone-300 transition-all hover:shadow-md">
                             <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-stone-600 bg-stone-100 border border-stone-200 relative">{{ (rec.category && rec.category[0]) ? rec.category[0] : '?' }}<div v-if="rec.isFixed" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-earth-green rounded-full border border-white"></div></div><div><div class="text-sm font-bold text-stone-700 flex items-center gap-1">{{ rec.category }}<span v-if="rec.summary" class="text-stone-600">· {{ rec.summary }}</span><span v-if="rec.note" class="text-xs font-normal text-stone-400"> ({{ rec.note }})</span></div><div class="text-[10px] text-stone-400 font-mono flex items-center gap-1">{{ rec.date }}<span v-if="rec.bankName" class="text-earth-accent bg-orange-50 px-1 rounded">{{rec.bankName}}</span></div></div></div>
@@ -167,6 +199,14 @@
                                 <button @click="deleteAccounting(rec.id)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                             </div>
                         </div>
+
+                        <!-- Filtered Total Amount Display -->
+                        <div v-if="isExpanded && visibleRecords.length > 0" class="flex justify-end pt-2 border-t border-stone-200">
+                            <div class="text-xs md:text-sm font-bold text-stone-600 bg-stone-100 px-3 py-1 rounded-lg border border-stone-200">
+                                篩選總金額: <span class="font-mono text-earth-accent">{{ formatCurrency(visibleTotalAmount) }}</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </transition>
@@ -219,7 +259,8 @@
                         <div v-for="(stock, idx) in bullpen" :key="stock.id" class="bg-white rounded-xl p-3 shadow-sm border border-stone-100 relative group hover:shadow-md transition-all" :class="{'ring-2 ring-earth-green/20': editingBullpenId === stock.id}">
                              <div class="flex justify-between items-center mb-2 border-b border-stone-100 pb-2">
                                 <div class="flex items-center gap-2"><span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ stock.code }}</span><span class="text-sm md:text-base font-bold text-stone-700">{{ stock.name }}</span><span class="text-[10px] md:text-xs text-stone-400 ml-1">{{ stock.date }}</span></div>
-                            </div>
+                                <button @click="deleteBullpen(idx)" class="text-[10px] md:text-xs text-stone-300 hover:text-earth-accent active:scale-95 p-1">刪除</button>
+                             </div>
                              <div class="grid grid-cols-2 gap-2 text-center text-xs md:text-sm mb-2"><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">投入金額</span><span class="font-mono font-bold">{{ formatCurrency(stock.investedAmount) }}</span></div><div class="bg-stone-50 p-1.5 rounded flex justify-between px-3"><span class="text-[10px] md:text-xs text-stone-400">實際投報率</span><span class="font-mono font-bold" :class="Number(stock.roi) >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.roi }}%</span></div></div>
                              <div class="grid grid-cols-4 gap-2 text-center text-xs md:text-sm"><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">買均</div><div class="font-mono">{{stock.buyAvg}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">賣均</div><div class="font-mono">{{stock.sellAvg || '-'}}</div></div><div class="bg-stone-50 p-1 rounded"><div class="text-[9px] md:text-xs text-stone-400 scale-90">平均利潤</div><div class="font-mono">{{ stock.avgProfit }}%</div></div><div class="bg-stone-50 p-1 rounded border border-stone-100"><div class="text-[9px] md:text-xs text-stone-400 scale-90">獲利</div><div class="font-mono font-bold" :class="stock.profit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ stock.profit }}</div></div></div>
                              
@@ -437,6 +478,8 @@
                 const isAddingCategoryEdit = ref(false);
                 const newCategoryNameEdit = ref('');
                 const newCatInputEdit = ref(null);
+                // New state for filter
+                const filterFixed = ref(false);
 
                 const openEditModal = (rec) => { editingId.value = rec.id; editForm.value = { ...rec }; showEditModal.value = true; };
                 const closeEditModal = () => { showEditModal.value = false; editingId.value = null; isAddingCategoryEdit.value = false; };
@@ -528,15 +571,27 @@
                 const filterEndDate = ref(defaultEnd);
 
                 const toggleExpand = () => isExpanded.value = !isExpanded.value;
+                
+                // Computed for filtered records
                 const visibleRecords = computed(() => {
                     let recs = accountingRecords.value;
                     if (!isExpanded.value) return recs.slice(0, 3);
+                    
                     return recs.filter(r => {
                         const inDate = r.date >= filterStartDate.value && r.date <= filterEndDate.value;
-                        const matchQuery = r.note.includes(searchQuery.value) || r.category.includes(searchQuery.value);
-                        return inDate && matchQuery;
+                        const matchQuery = r.note.includes(searchQuery.value) || r.category.includes(searchQuery.value) || (r.summary && r.summary.includes(searchQuery.value));
+                        // Filter Logic
+                        const matchFixed = filterFixed.value ? r.isFixed : true;
+                        
+                        return inDate && matchQuery && matchFixed;
                     });
                 });
+                
+                // Computed for total amount
+                const visibleTotalAmount = computed(() => {
+                    return visibleRecords.value.reduce((sum, rec) => sum + Number(rec.amount), 0);
+                });
+
                 const onCodeBlur = (type) => {
                     const form = bullForm;
                     if(stockDB[form.value.code]) form.value.name = stockDB[form.value.code].name;
@@ -547,9 +602,9 @@
                 return {
                     activeTab, tabs, currentDate, todayDateStr, showSettings, googleSheetUrl, isLoading, fetchData, isOffline,
                     categories, isAddingCategory, newCategoryName, newCatInput, checkCategory, confirmNewCategory,
-                    accForm, accountingRecords, visibleRecords, addAccounting, deleteAccounting, dailyIncome, dailyBalance,
+                    accForm, accountingRecords, visibleRecords, visibleTotalAmount, addAccounting, deleteAccounting, dailyIncome, dailyBalance,
                     showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit,
-                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate,
+                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed,
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     onCodeBlur, formatCurrency, getProfitClass
                 };
