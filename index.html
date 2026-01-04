@@ -183,53 +183,7 @@
                 </div>
             </transition>
 
-            <!-- 2. STOCK INVESTMENT -->
-            <transition name="fade" mode="out-in">
-                <div v-if="activeTab === 'stock-inv'" key="stock-inv" class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div class="md:col-span-5 space-y-5">
-                        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4" :class="{'ring-2 ring-earth-accent/20': editingStockId}">
-                            <div class="absolute left-0 top-0 bottom-0 w-1.5" :class="editingStockId ? 'bg-earth-green' : 'bg-earth-accent'"></div>
-                            <h3 class="text-xs md:text-sm font-bold text-stone-700 uppercase tracking-wider mb-3 flex items-center gap-2 pl-2">
-                                 <svg v-if="!editingStockId" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-                                 <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-earth-green"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                 {{ editingStockId ? '編輯投資紀錄' : '新增投資紀錄' }}
-                            </h3>
-                            <div class="grid grid-cols-4 gap-2 mb-2 pl-2"><input type="text" v-model="invForm.code" @blur="onCodeBlur('inv')" placeholder="代號" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none"><input type="text" v-model="invForm.name" placeholder="名稱" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none"></div>
-                            <div class="grid grid-cols-2 gap-2 mb-2 pl-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">交易日期</label><input type="date" v-model="invForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">手續費</label><input type="number" v-model="invForm.fee" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div></div>
-                            <div class="grid grid-cols-3 gap-2 mb-3 pl-2"><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="invForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="invForm.sellAvg" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div><div><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">股數</label><input type="number" v-model="invForm.shares" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono"></div></div>
-                            <div class="flex gap-2 pl-2"><button v-if="editingStockId" @click="cancelStockEdit" class="w-1/3 bg-stone-200 hover:bg-stone-300 text-stone-600 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">取消</button><button v-else @click="resetInvForm" class="w-1/3 bg-stone-100 hover:bg-stone-200 text-stone-500 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95">重置</button><button @click="editingStockId ? updateInvestment() : addInvestment()" class="w-2/3 text-white py-2 rounded-lg text-xs md:text-sm font-bold transition-colors active:scale-95" :class="editingStockId ? 'bg-earth-green hover:bg-green-700' : 'bg-stone-700 hover:bg-stone-800'">{{ editingStockId ? '確認更新' : '加入投資組合' }}</button></div>
-                        </div>
-                    </div>
-                    <div class="md:col-span-7 space-y-3">
-                         <div v-if="investments.length === 0" class="text-center py-10 opacity-60"><p class="text-xs text-stone-400">尚無投資項目</p></div>
-                         <div v-for="(item, idx) in investments" :key="item.id" class="bg-white rounded-xl p-4 shadow-sm border border-stone-200 relative hover:shadow-md transition-all" :class="{'ring-2 ring-earth-green/20': editingStockId === item.id}">
-                             <div class="flex justify-between items-start mb-3 border-b border-stone-100 pb-2">
-                                 <div><div class="flex items-center gap-2"><span class="bg-stone-800 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded">{{ item.code }}</span><span class="text-sm md:text-base font-bold text-stone-800">{{ item.name }}</span><span v-if="!item.sellAvg || Number(item.sellAvg) === 0" class="bg-blue-100 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded">存股</span><span v-else class="bg-green-100 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded">已售</span></div><div class="text-[10px] md:text-xs text-stone-400 font-mono mt-1">{{ item.date }} · 手續費 ${{ item.fee }}</div></div>
-                                 <div class="text-right cursor-pointer group" @click="updatePrice(item)" title="點擊更新現價">
-                                     <div class="text-xs md:text-sm font-bold text-stone-600 flex items-center justify-end gap-1 group-hover:text-earth-accent transition-colors">
-                                         現價: {{ item.currentPrice }}
-                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                     </div>
-                                     <div class="text-[10px] md:text-xs font-mono border-b border-transparent group-hover:border-dashed group-hover:border-stone-300" :class="getPriceDiffClass(item)">
-                                         昨收 {{ item.prevClose }} ({{ getPriceDiffPercent(item) }}%)
-                                     </div>
-                                 </div>
-                             </div>
-                             <div class="grid grid-cols-3 gap-2 text-center">
-                                 <div class="bg-stone-50 rounded p-1"><div class="text-[9px] md:text-xs text-stone-400">買均</div><div class="text-xs md:text-sm font-mono font-bold">{{ item.buyAvg }}</div></div>
-                                 <div class="bg-stone-50 rounded p-1"><div class="text-[9px] md:text-xs text-stone-400">賣均</div><div class="text-xs md:text-sm font-mono font-bold">{{ item.sellAvg || '-' }}</div></div>
-                                 <div class="bg-stone-50 rounded p-1 border border-stone-100"><div class="text-[9px] md:text-xs text-stone-400">{{ (!item.sellAvg || Number(item.sellAvg) === 0) ? '帳面損益' : '已實現獲利' }}</div><div class="text-xs md:text-sm font-mono font-bold" :class="getProfitClass(calculateStockProfit(item))">{{ calculateStockProfit(item) }}</div></div>
-                             </div>
-                             <div class="flex justify-end gap-5 mt-2 pt-2 border-t border-stone-50">
-                                 <button @click="editInvestment(item)" class="text-stone-300 hover:text-earth-green transition-colors p-2 rounded-full hover:bg-stone-50 active:scale-95" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                                 <button @click="deleteInvestment(idx)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                             </div>
-                         </div>
-                    </div>
-                </div>
-            </transition>
-
-            <!-- 3. BULLPEN -->
+            <!-- 2. BULLPEN -->
             <transition name="fade" mode="out-in">
                 <div v-if="activeTab === 'bullpen'" key="bullpen" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-5 space-y-5">
@@ -247,7 +201,20 @@
                                 {{ editingBullpenId ? '編輯牛棚紀錄' : '本日牛棚' }}
                             </h3>
                             <div class="grid grid-cols-4 gap-4 mb-2 pl-2"><input type="text" v-model="bullForm.code" @blur="onCodeBlur('bull')" placeholder="代碼" class="col-span-1 bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm text-center font-bold focus:border-stone-400 outline-none"><input type="text" v-model="bullForm.name" placeholder="名稱 (可手動輸入)" class="col-span-3 bg-stone-50 border border-stone-200 text-stone-700 rounded px-2 py-1.5 text-xs md:text-sm font-bold focus:border-earth-accent outline-none"></div>
-                            <div class="grid grid-cols-2 gap-4 mb-2 pl-2"><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">日期</label><input type="date" v-model="bullForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm"></div><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">投入金額</label><input type="number" v-model="bullForm.investedAmount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
+                            
+                            <!-- iOS Fix: Added min-w-0 to prevent flex/grid blowout -->
+                            <div class="grid grid-cols-2 gap-4 mb-2 pl-2">
+                                <div class="min-w-0">
+                                    <label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">日期</label>
+                                    <!-- Added appearance-none and block to reset iOS default styling -->
+                                    <input type="date" v-model="bullForm.date" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm appearance-none outline-none focus:border-stone-400 block">
+                                </div>
+                                <div class="min-w-0">
+                                    <label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">投入金額</label>
+                                    <input type="number" v-model="bullForm.investedAmount" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none">
+                                </div>
+                            </div>
+                            
                             <div class="grid grid-cols-2 gap-4 mb-2 pl-2"><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">買入均價</label><input type="number" v-model="bullForm.buyAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">賣出均價</label><input type="number" v-model="bullForm.sellAvg" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div></div>
                              <div class="grid grid-cols-2 gap-4 mb-3 pl-2"><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">平均利潤</label><input type="number" v-model="bullForm.avgProfit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono focus:border-stone-400 outline-none"></div><div class="min-w-0"><label class="text-[9px] md:text-xs text-stone-400 block mb-0.5">獲利 (總額)</label><input type="number" v-model="bullForm.profit" placeholder="0" class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1.5 text-xs md:text-sm font-mono font-bold text-stone-700 focus:border-stone-400 outline-none"></div></div>
                             
@@ -366,10 +333,9 @@
                 const todayDateStr = new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
                 const IconBook = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>` };
-                const IconTrending = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>` };
                 const IconCow = { template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5l-2-2H9L7 5 3 9v11h18V9l-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>` };
 
-                const tabs = [ { id: 'accounting', label: '日常記帳', icon: IconBook }, { id: 'stock-inv', label: '股票投資', icon: IconTrending }, { id: 'bullpen', label: '牛棚', icon: IconCow } ];
+                const tabs = [ { id: 'accounting', label: '日常記帳', icon: IconBook }, { id: 'bullpen', label: '牛棚', icon: IconCow } ];
                 const stockDB = { '2330': { name: '台積電', price: 580, prevClose: 576 }, '0050': { name: '元大台灣50', price: 128.5, prevClose: 129 }, '00878': { name: '國泰永續高股息', price: 20.5, prevClose: 20.4 }, '00919': { name: '群益台灣精選高息', price: 21.2, prevClose: 21.0 }, '2317': { name: '鴻海', price: 105, prevClose: 104 }, '2603': { name: '長榮', price: 155, prevClose: 150 } };
 
                 const categories = ref(['餐費', '交通', '購物', '娛樂', '居住', '其他']);
@@ -381,12 +347,9 @@
                 const accountingRecords = ref([]);
                 const dailyIncome = ref(null);
                 
-                const editingStockId = ref(null);
-
                 const investedCapital = ref(30900); 
                 const bullForm = ref({ code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null });
                 const bullpen = ref([]); 
-                // Add editingBullpenId ref
                 const editingBullpenId = ref(null);
 
                 const showSettings = ref(false);
@@ -394,64 +357,30 @@
 
                 const processFixedExpenses = async () => {
                     const now = new Date();
-                    // Current YYYY-MM
                     const currentYear = now.getFullYear();
                     const currentMonth = now.getMonth() + 1;
                     const currentMonthPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-
-                    // Previous YYYY-MM
                     const prevDate = new Date(currentYear, currentMonth - 2, 1); 
                     const prevYear = prevDate.getFullYear();
                     const prevMonth = prevDate.getMonth() + 1;
                     const prevMonthPrefix = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
 
-                    // Find fixed expenses in previous month
-                    const prevFixedRecs = accountingRecords.value.filter(r => 
-                        r.isFixed && r.date.startsWith(prevMonthPrefix)
-                    );
-
-                    // Find fixed expenses in current month
-                    const currentFixedRecs = accountingRecords.value.filter(r => 
-                        r.isFixed && r.date.startsWith(currentMonthPrefix)
-                    );
+                    const prevFixedRecs = accountingRecords.value.filter(r => r.isFixed && r.date.startsWith(prevMonthPrefix));
+                    const currentFixedRecs = accountingRecords.value.filter(r => r.isFixed && r.date.startsWith(currentMonthPrefix));
 
                     let addedCount = 0;
-
                     for (const rec of prevFixedRecs) {
-                        // Check if this specific fixed expense exists in current month
-                        const exists = currentFixedRecs.some(curr => 
-                            curr.category === rec.category && 
-                            curr.amount === rec.amount && 
-                            curr.note === rec.note
-                        );
-
+                        const exists = currentFixedRecs.some(curr => curr.category === rec.category && curr.amount === rec.amount && curr.note === rec.note);
                         if (!exists) {
-                            // Generate new record for the 1st of current month
-                            const newRec = {
-                                ...rec,
-                                id: Date.now().toString() + Math.random().toString().slice(2,5), // Unique ID
-                                date: `${currentMonthPrefix}-01`,
-                                type: 'accounting' // Ensure type is present for GAS
-                            };
-                            
-                            // Add to local state (to top of list)
+                            const newRec = { ...rec, id: Date.now().toString() + Math.random().toString().slice(2,5), date: `${currentMonthPrefix}-01`, type: 'accounting' };
                             accountingRecords.value.unshift(newRec);
                             addedCount++;
-
-                            // Sync to Google Sheet
                             if (googleSheetUrl.value && !isOffline.value) {
-                                 await fetch(googleSheetUrl.value, { 
-                                    method: 'POST', 
-                                    mode: 'no-cors', 
-                                    headers: {'Content-Type': 'application/json'}, 
-                                    body: JSON.stringify(newRec) 
-                                }).catch(e => console.error(e));
+                                 await fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newRec) }).catch(e => console.error(e));
                             }
                         }
                     }
-                    if (addedCount > 0) {
-                        console.log(`Auto-generated ${addedCount} fixed expenses from previous month.`);
-                    }
+                    if (addedCount > 0) console.log(`Auto-generated ${addedCount} fixed expenses.`);
                 };
 
                 const fetchData = async () => {
@@ -460,23 +389,15 @@
                     isOffline.value = false;
                     try {
                         const response = await fetch(googleSheetUrl.value);
-                        
                         const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.indexOf("application/json") === -1) {
-                            throw new Error("Received non-JSON response from Google Sheet. Check permissions (Anyone) or script deployment.");
-                        }
-
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        
+                        if (contentType && contentType.indexOf("application/json") === -1) throw new Error("Non-JSON response");
+                        if (!response.ok) throw new Error('Network response not ok');
                         const data = await response.json();
-                        
                         if (data) {
                             if (Array.isArray(data.accounting)) accountingRecords.value = data.accounting.reverse(); 
                             if (Array.isArray(data.bullpen)) bullpen.value = data.bullpen.reverse();
                         }
-                        // Check and generate fixed expenses after data load
                         await processFixedExpenses();
-
                     } catch (e) {
                         console.error("Fetch error", e);
                         isOffline.value = true;
@@ -485,9 +406,7 @@
                     }
                 };
 
-                onMounted(() => {
-                    fetchData();
-                });
+                onMounted(() => { fetchData(); });
 
                 let expenseChart = null;
                 const updateChart = () => {
@@ -507,9 +426,7 @@
                             if (expenseChart) expenseChart.destroy();
                             if (data.length === 0) return;
                             expenseChart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#FCA5A5', '#93C5FD', '#D8B4FE', '#FDE047', '#86EFAC', '#CBD5E1', '#FDBA74', '#6EE7B7'], borderWidth: 0, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }, layout: { padding: 10 } } });
-                        } catch (err) {
-                            console.warn("Chart rendering failed", err);
-                        }
+                        } catch (err) { console.warn("Chart error", err); }
                     });
                 };
                 watch(accountingRecords, updateChart, { deep: true });
@@ -552,13 +469,18 @@
                     closeEditModal();
                 };
 
+                const resetAccForm = () => {
+                    accForm.value = { date: currentDate.value, category: '餐費', amount: null, summary: '', note: '', paymentType: 'cash', bankName: '', isFixed: false };
+                };
+
                 const addAccounting = () => {
                     if (accForm.value.amount === null || accForm.value.amount === '') { alert('請輸入金額'); return; }
                     const newRecord = { id: Date.now().toString(), ...accForm.value, amount: Number(accForm.value.amount), type: 'accounting' };
                     accountingRecords.value.unshift(newRecord);
                     if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newRecord) }).catch(e => console.error(e)); }
                     const prevDate = accForm.value.date;
-                    accForm.value = { date: prevDate, category: '餐費', amount: null, summary: '', note: '', paymentType: 'cash', bankName: '', isFixed: false };
+                    resetAccForm();
+                    accForm.value.date = prevDate;
                 };
 
                 const deleteAccounting = (id) => {
@@ -568,64 +490,6 @@
                             const rec = accountingRecords.value[idx];
                             accountingRecords.value.splice(idx, 1);
                             if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: rec.id, type: 'accounting' }) }).catch(e => console.error(e)); }
-                        }
-                    }
-                };
-
-                // --- Investment Logic ---
-                const addInvestment = () => {
-                    if(!invForm.value.code || !invForm.value.shares) return;
-                    const dbData = stockDB[invForm.value.code] || { name: '自訂', price: Number(invForm.value.buyAvg), prevClose: Number(invForm.value.buyAvg) };
-                    const newInv = { id: Date.now().toString(), ...invForm.value, name: invForm.value.name || dbData.name, currentPrice: dbData.price, prevClose: dbData.prevClose, type: 'investment' };
-                    investments.value.push(newInv);
-                    if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newInv) }).catch(e => console.error(e)); }
-                    resetInvForm();
-                };
-                const updateInvestment = () => {
-                    const idx = investments.value.findIndex(r => r.id === editingStockId.value);
-                    if (idx !== -1) {
-                        const original = investments.value[idx];
-                        const updatedInv = { ...original, ...invForm.value };
-                        investments.value.splice(idx, 1, updatedInv);
-                        
-                        // Fix: Send update action to Google Sheet
-                        if(googleSheetUrl.value && !isOffline.value) {
-                            fetch(googleSheetUrl.value, { 
-                                method: 'POST', 
-                                mode: 'no-cors', 
-                                headers: {'Content-Type': 'application/json'}, 
-                                body: JSON.stringify({ ...updatedInv, type: 'investment', action: 'update' }) 
-                            }).catch(e => console.error(e));
-                        }
-                    }
-                    cancelStockEdit();
-                };
-                const resetInvForm = () => { invForm.value = { code: '', name: '', date: currentDate.value, buyAvg: null, sellAvg: null, shares: null, fee: null }; };
-                const editInvestment = (item) => { editingStockId.value = item.id; invForm.value = { ...item }; window.scrollTo({ top: 0, behavior: 'smooth' }); };
-                const cancelStockEdit = () => { editingStockId.value = null; resetInvForm(); };
-                const deleteInvestment = (idx) => {
-                    if(confirm('刪除？')) {
-                        const item = investments.value[idx];
-                        investments.value.splice(idx, 1);
-                        if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: item.id, type: 'investment' }) }).catch(e => console.error(e)); }
-                    }
-                };
-                const calculateStockProfit = (item) => {
-                    const currentVal = (item.sellAvg && Number(item.sellAvg) > 0) ? Number(item.sellAvg) : Number(item.prevClose || 0);
-                    const buyCost = item.buyAvg * item.shares;
-                    const revenue = currentVal * item.shares;
-                    return Math.round(revenue - buyCost - (Number(item.fee)||0));
-                };
-                const getPriceDiffClass = (item) => (item.prevClose || 0) >= item.buyAvg ? 'text-earth-accent' : 'text-earth-green';
-                const getPriceDiffPercent = (item) => 0;
-
-                const updatePrice = (item) => {
-                    const newPrice = prompt(`請輸入 ${item.name} (${item.code}) 的最新現價:`, item.currentPrice);
-                    if (newPrice !== null && !isNaN(newPrice)) {
-                        item.currentPrice = Number(newPrice);
-                        const newPrev = prompt(`請輸入 ${item.name} 的昨日收盤價 (用於計算漲跌):`, item.prevClose);
-                        if (newPrev !== null && !isNaN(newPrev)) {
-                            item.prevClose = Number(newPrev);
                         }
                     }
                 };
@@ -641,52 +505,26 @@
                     bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null };
                 };
                 
-                // Add updateBullpen logic
                 const updateBullpen = () => {
                     const idx = bullpen.value.findIndex(r => r.id === editingBullpenId.value);
                     if (idx !== -1) {
                         const original = bullpen.value[idx];
-                        
-                        // Recalculate ROI
                         const profit = Number(bullForm.value.profit || 0);
                         const invested = Number(bullForm.value.investedAmount);
                         const roi = invested > 0 ? ((profit / invested) * 100).toFixed(2) : '0.00';
 
-                        const updatedBullpen = { 
-                            ...original, 
-                            ...bullForm.value,
-                            roi, // Update ROI
-                            type: 'bullpen', // Ensure type is set
-                            action: 'update' // Set action to update
-                        };
-                        
+                        const updatedBullpen = { ...original, ...bullForm.value, roi, type: 'bullpen', action: 'update' };
                         bullpen.value.splice(idx, 1, updatedBullpen);
                         
                         if(googleSheetUrl.value && !isOffline.value) {
-                            fetch(googleSheetUrl.value, { 
-                                method: 'POST', 
-                                mode: 'no-cors', 
-                                headers: {'Content-Type': 'application/json'}, 
-                                body: JSON.stringify(updatedBullpen) 
-                            }).catch(e => console.error(e));
+                            fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(updatedBullpen) }).catch(e => console.error(e));
                         }
                     }
                     cancelBullpenEdit();
                 };
 
-                // Add editBullpen logic
-                const editBullpen = (item) => {
-                    editingBullpenId.value = item.id;
-                    bullForm.value = { ...item };
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                };
-
-                // Add cancelBullpenEdit logic
-                const cancelBullpenEdit = () => {
-                    editingBullpenId.value = null;
-                    bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null };
-                };
-
+                const editBullpen = (item) => { editingBullpenId.value = item.id; bullForm.value = { ...item }; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+                const cancelBullpenEdit = () => { editingBullpenId.value = null; bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null }; };
                 const deleteBullpen = (idx) => {
                     if(confirm('刪除？')) {
                         const item = bullpen.value[idx];
@@ -697,7 +535,6 @@
 
                 const isExpanded = ref(false);
                 const searchQuery = ref('');
-                // Initialize default dates with current month range
                 const { start: defaultStart, end: defaultEnd } = getMonthRange();
                 const filterStartDate = ref(defaultStart);
                 const filterEndDate = ref(defaultEnd);
@@ -713,7 +550,6 @@
                     });
                 });
                 const onCodeBlur = (type) => {
-                    // Only for bullForm now
                     const form = bullForm;
                     if(stockDB[form.value.code]) form.value.name = stockDB[form.value.code].name;
                 };
@@ -726,9 +562,7 @@
                     accForm, accountingRecords, visibleRecords, addAccounting, deleteAccounting, dailyIncome, dailyBalance,
                     showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit,
                     isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate,
-                    investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen,
-                    // Export new Bullpen logic
-                    editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
+                    investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     onCodeBlur, formatCurrency, getProfitClass
                 };
             }
