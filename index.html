@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MeowMoney 智慧理財</title>
+    <title>MeowMoney</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 with crossorigin -->
@@ -113,7 +113,12 @@
             <transition name="fade" mode="out-in">
                 <div v-if="activeTab === 'accounting'" key="accounting" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-5 space-y-5">
-                        <!-- Settings Toggle (Hidden) -->
+                        <div class="flex justify-end">
+                            <button @click="showSettings = !showSettings" class="text-[10px] md:text-xs flex items-center gap-1 text-stone-400 hover:text-earth-accent transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                Google Sheet 設定
+                            </button>
+                        </div>
                         <div v-if="showSettings" class="bg-stone-100 p-3 rounded-xl border border-stone-200 text-xs animate-fade-in">
                             <label class="block font-bold text-stone-600 mb-1">Apps Script Web App URL</label>
                             <input v-model="googleSheetUrl" type="text" class="w-full p-2 rounded border border-stone-300 mb-2">
@@ -125,12 +130,8 @@
                                 <div>
                                     <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月總收入 (預設+新增)</label>
                                     <div class="flex items-center gap-1">
-                                        <span class="text-stone-400 text-lg">$</span>
+                                        <!-- Removed duplicate '$' symbol and removed baseIncome input -->
                                         <span class="text-2xl font-mono font-bold text-stone-700">{{ formatCurrency(totalMonthlyIncome) }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-1 mt-1">
-                                        <span class="text-[9px] text-stone-400">預設底薪:</span>
-                                        <input type="number" v-model="baseIncome" class="text-[10px] w-16 bg-stone-50 border-b border-stone-300 focus:outline-none focus:border-earth-accent text-stone-500">
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -168,10 +169,7 @@
                                 <div class="bg-stone-50 p-2 rounded-lg border border-stone-100">
                                     <div class="flex gap-2 mb-2"><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="cash" class="accent-stone-700"> 現金</label><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="card" class="accent-earth-accent"> 信用卡</label></div>
                                     <div v-if="accForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="accForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-earth-accent"></div>
-                                    <div class="flex items-center justify-between">
-                                        <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費</span></label>
-                                        <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isCountInThisMonth" class="accent-earth-green w-3 h-3"> <span class="text-earth-accent font-bold">計入本月</span></label>
-                                    </div>
+                                    <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費 (自動延續)</span></label>
                                 </div>
                                 <div><input type="text" v-model="accForm.note" placeholder="備註..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent mb-3">
                                 <button @click="addAccounting" class="w-full text-white py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center justify-center gap-2 active:scale-95 transform" :class="accForm.type === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-stone-800 hover:bg-black'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {{ accForm.type === 'income' ? '新增收入' : '新增支出' }}</button></div>
@@ -201,8 +199,18 @@
                         </div>
                         <div v-if="visibleRecords.length === 0" class="text-center py-6 border-2 border-dashed border-stone-200 rounded-xl"><p class="text-stone-400 text-sm">目前沒有記帳資料</p></div>
                         <div v-for="rec in visibleRecords" :key="rec.id" class="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex items-center justify-between group hover:border-stone-300 transition-all hover:shadow-md">
-                            <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border relative" :class="rec.type === 'income' ? 'text-green-600 bg-green-50 border-green-200' : 'text-stone-600 bg-stone-100 border-stone-200'">{{ (rec.category && rec.category[0]) ? rec.category[0] : '?' }}<div v-if="rec.isFixed" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-earth-green rounded-full border border-white"></div></div><div><div class="text-sm font-bold text-stone-700 flex items-center gap-1">{{ rec.category }}<span v-if="rec.summary" class="text-stone-600">· {{ rec.summary }}</span><span v-if="rec.note" class="text-xs font-normal text-stone-400"> ({{ rec.note }})</span><span v-if="rec.isCountInThisMonth" class="text-[9px] bg-earth-accent text-white px-1 rounded ml-1">計入本月</span></div><div class="text-[10px] text-stone-400 font-mono flex items-center gap-1">{{ rec.date }}<span v-if="rec.bankName" class="text-earth-accent bg-orange-50 px-1 rounded">{{rec.bankName}}</span></div></div></div>
-                            <div class="flex items-center gap-5"><span class="font-mono font-bold text-sm mr-1" :class="rec.type === 'income' ? 'text-green-600' : 'text-stone-700'">{{ rec.type === 'income' ? '+' : '-' }}{{ rec.amount }}</span>
+                            <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0"> <!-- Optimization for Mobile -->
+                                <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border relative flex-shrink-0" :class="rec.type === 'income' ? 'text-green-600 bg-green-50 border-green-200' : 'text-stone-600 bg-stone-100 border-stone-200'">{{ (rec.category && rec.category[0]) ? rec.category[0] : '?' }}<div v-if="rec.isFixed" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-earth-green rounded-full border border-white"></div></div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-bold text-stone-700 truncate"> <!-- Truncate title -->
+                                        {{ rec.summary || rec.category }}<span v-if="rec.note" class="text-xs font-normal text-stone-400 ml-1">({{ rec.note }})</span>
+                                        <span v-if="rec.isCountInThisMonth" class="text-[9px] bg-earth-accent text-white px-1 rounded ml-1 flex-shrink-0">計入本月</span>
+                                    </div>
+                                    <div class="text-[10px] text-stone-400 font-mono flex items-center gap-1">{{ rec.date }}<span v-if="rec.bankName" class="text-earth-accent bg-orange-50 px-1 rounded">{{rec.bankName}}</span></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 flex-shrink-0"> <!-- Adjusted gap -->
+                                <span class="font-mono font-bold text-sm" :class="rec.type === 'income' ? 'text-green-600' : 'text-stone-700'">{{ rec.type === 'income' ? '+' : '-' }}{{ rec.amount }}</span>
                                 <button @click="openEditModal(rec)" class="text-stone-300 hover:text-earth-green transition-colors p-2 rounded-full hover:bg-stone-50 active:scale-95" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                                 <button @click="deleteAccounting(rec.id)" class="text-stone-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 active:scale-95" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                             </div>
@@ -359,6 +367,7 @@
                     return new Date(d.getTime() - offset).toISOString().split('T')[0];
                 };
                 
+                // --- Date Helper for Current Month Default ---
                 const getMonthRange = () => {
                     const date = new Date();
                     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -395,7 +404,7 @@
                 const dailyIncome = ref(38671);
                 const baseIncome = ref(38671);
                 
-                const investedCapital = ref(30900); 
+                const investedCapital = ref(31200); 
                 const bullForm = ref({ code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null });
                 const bullpen = ref([]); 
                 const editingBullpenId = ref(null);
@@ -502,13 +511,16 @@
                         if (data) {
                             if (Array.isArray(data.accounting)) {
                                 accountingRecords.value = data.accounting.filter(rec => rec && rec.date).reverse().map(rec => {
+                                    // Safety check to prevent Script Error on filter
                                     rec.note = (rec.note || '').toString();
                                     rec.category = (rec.category || '未分類').toString();
                                     rec.summary = (rec.summary || '').toString();
                                     rec.bankName = (rec.bankName || '').toString();
                                     rec.amount = Number(rec.amount) || 0;
+                                    // Assume GAS sends this field, or default to false
                                     rec.isCountInThisMonth = rec.isCountInThisMonth === true || rec.isCountInThisMonth === '是';
 
+                                    // Restore type from category name
                                     if (rec.category.endsWith('(收入)')) {
                                         rec.type = 'income';
                                         rec.category = rec.category.replace(' (收入)', '');
@@ -523,9 +535,6 @@
                             if (Array.isArray(data.bullpen)) {
                                 bullpen.value = data.bullpen.reverse().map(item => {
                                     // Fix: Auto-correct percentage decimals from legacy sheet data
-                                    // If value is small (e.g. 0.0367 instead of 3.67), multiply by 100
-                                    // Threshold 0.9 is used because profit can be < 1%, but usually entered as e.g. 3.5
-                                    // If it's strictly a sheet decimal conversion (0.0xxx), this helps.
                                     if (Math.abs(item.avgProfit) < 0.9 && item.avgProfit !== 0) {
                                         item.avgProfit = parseFloat((item.avgProfit * 100).toFixed(2));
                                     }
@@ -569,7 +578,7 @@
                             const data = labels.map(k => totals[k]);
                             if (expenseChart) expenseChart.destroy();
                             if (data.length === 0) return;
-                            expenseChart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#FCA5A5', '#93C5FD', '#D8B4FE', '#FDE047', '#86EFAC', '#CBD5E1', '#FDBA74', '#6EE7B7'], borderWidth: 0, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }, layout: { padding: 10 } } });
+                            expenseChart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#FCA5A5', '#93C5FD', '#D8B4FE', '#FDE047', '#86EFAC', '#CBD5E1', '#FDBA74', '#6EE7B7', '#F472B6', '#A78BFA'], borderWidth: 0, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }, layout: { padding: 10 } } });
                         } catch (err) { console.warn("Chart error", err); }
                     });
                 };

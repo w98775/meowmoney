@@ -1,4 +1,5 @@
 {
-  "name": "Empty Project",
-  "description": "A completely empty project state."
+  "name": "meow",
+  "description": "A completely empty project state.",
+  "requestFramePermissions": []
 }
