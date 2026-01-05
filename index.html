@@ -130,13 +130,10 @@
                                 <div>
                                     <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月總收入 (預設+新增)</label>
                                     <div class="flex items-center gap-1">
-                                        <span class="text-stone-400 text-lg">$</span>
+                                        <!-- Removed extra '$', showing only formatted currency -->
                                         <span class="text-2xl font-mono font-bold text-stone-700">{{ formatCurrency(totalMonthlyIncome) }}</span>
                                     </div>
-                                    <div class="flex items-center gap-1 mt-1">
-                                        <span class="text-[9px] text-stone-400">預設底薪:</span>
-                                        <input type="number" v-model="baseIncome" class="text-[10px] w-16 bg-stone-50 border-b border-stone-300 focus:outline-none focus:border-earth-accent text-stone-500">
-                                    </div>
+                                    <!-- Removed baseIncome input field as requested -->
                                 </div>
                                 <div class="text-right">
                                     <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當日結餘</label>
@@ -173,10 +170,7 @@
                                 <div class="bg-stone-50 p-2 rounded-lg border border-stone-100">
                                     <div class="flex gap-2 mb-2"><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="cash" class="accent-stone-700"> 現金</label><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="card" class="accent-earth-accent"> 信用卡</label></div>
                                     <div v-if="accForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="accForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-earth-accent"></div>
-                                    <div class="flex items-center justify-between">
-                                        <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費 (自動延續)</span></label>
-                                        <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isCountInThisMonth" class="accent-earth-green w-3 h-3"> <span class="text-earth-accent font-bold">計入本月</span></label>
-                                    </div>
+                                    <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費 (自動延續)</span></label>
                                 </div>
                                 <div><input type="text" v-model="accForm.note" placeholder="備註..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent mb-3">
                                 <button @click="addAccounting" class="w-full text-white py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center justify-center gap-2 active:scale-95 transform" :class="accForm.type === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-stone-800 hover:bg-black'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {{ accForm.type === 'income' ? '新增收入' : '新增支出' }}</button></div>
@@ -238,7 +232,7 @@
                 <div v-if="activeTab === 'bullpen'" key="bullpen" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-5 space-y-5">
                         <div class="bg-stone-800 rounded-2xl p-4 text-stone-100 shadow-lg flex justify-between items-center">
-                            <div><p class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">已投入成本 (可編輯)</p><div class="flex items-center gap-1"><span class="text-stone-500">$</span><input type="number" v-model="investedCapital" class="bg-transparent border-b border-stone-600 w-24 text-xl md:text-2xl font-mono font-bold text-white focus:outline-none focus:border-earth-accent transition-colors appearance-none"></div></div>
+                            <div><p class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">已投入成本</p><div class="flex items-center gap-1"><span class="text-xl md:text-2xl font-mono font-bold text-white">{{ formatCurrency(investedCapital) }}</span></div></div>
                             <div class="text-right"><p class="text-[10px] md:text-xs font-bold text-earth-accent uppercase tracking-wider mb-1">目前已賺 (總獲利)</p><p class="text-xl md:text-2xl font-mono font-bold" :class="bullpenStats.totalProfit >= 0 ? 'text-earth-accent' : 'text-earth-green'">{{ formatCurrency(bullpenStats.totalProfit) }}</p></div>
                         </div>
                         <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4" :class="{'ring-2 ring-earth-accent/20': editingBullpenId}">
@@ -415,7 +409,6 @@
                     return { start: toDateInputStr(firstDay), end: toDateInputStr(lastDay) };
                 };
                 
-                // --- Bullpen Filter Helper ---
                 const getBullpenFilterMonth = () => {
                     const d = new Date();
                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -445,7 +438,7 @@
                 const dailyIncome = ref(38671);
                 const baseIncome = ref(38671);
                 
-                const investedCapital = ref(31200); 
+                const investedCapital = ref(30900); 
                 const bullForm = ref({ code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null, isLimitUp: false });
                 const bullpen = ref([]); 
                 const editingBullpenId = ref(null);
@@ -471,6 +464,10 @@
                 const setRecordType = (type) => {
                     accForm.value.type = type;
                     accForm.value.category = type === 'income' ? incomeCategories.value[0] : expenseCategories.value[0];
+                };
+                
+                const saveSettings = () => {
+                   // No inputs to trigger this anymore, but kept for logic structure
                 };
 
                 const processFixedExpenses = async () => {
@@ -560,6 +557,7 @@
                                     rec.summary = (rec.summary || '').toString();
                                     rec.bankName = (rec.bankName || '').toString();
                                     rec.amount = Number(rec.amount) || 0;
+                                    // Assume GAS sends this field, or default to false
                                     rec.isCountInThisMonth = rec.isCountInThisMonth === true || rec.isCountInThisMonth === '是';
 
                                     // Restore type from category name
@@ -585,6 +583,10 @@
                                     }
                                     return item;
                                 });
+                            }
+                            if (data.settings) {
+                                if (data.settings.baseIncome !== undefined) baseIncome.value = data.settings.baseIncome;
+                                if (data.settings.investedCapital !== undefined) investedCapital.value = data.settings.investedCapital;
                             }
                         }
                         await processFixedExpenses();
@@ -630,6 +632,8 @@
                 const expenseRecordsCount = computed(() => accountingRecords.value.filter(r => r.type === 'expense').length);
 
                 const totalMonthlyIncome = computed(() => {
+                    // Filter income records for current month of the FORM DATE or just all income?
+                    // Usually "Current Month" means month of currentDate.
                     const now = new Date();
                     const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                     const incomeSum = accountingRecords.value
@@ -677,10 +681,12 @@
                          const updatedRecord = { ...accountingRecords.value[idx], ...editForm.value, amount: Number(editForm.value.amount) };
                          accountingRecords.value.splice(idx, 1, updatedRecord);
                         
+                        // Prepare data for GAS (append (收入) if income)
                         const recordToSend = { ...updatedRecord };
                         if (recordToSend.type === 'income') {
                             recordToSend.category = recordToSend.category + ' (收入)';
                         } else {
+                            // Expense -> negative for sheet
                             recordToSend.amount = -Math.abs(recordToSend.amount);
                         }
 
@@ -697,18 +703,22 @@
 
                 const addAccounting = () => {
                     if (accForm.value.amount === null || accForm.value.amount === '') { alert('請輸入金額'); return; }
+                    // Fix: Do not overwrite type locally
                     const newRecord = { 
                         id: Date.now().toString(), 
                         ...accForm.value, 
                         amount: Number(accForm.value.amount) 
                     }; 
                     
+                    // Add local record
                     accountingRecords.value.unshift(newRecord);
                     
-                    const recordToSend = { ...newRecord, type: 'accounting' }; 
+                    // Prepare for GAS
+                    const recordToSend = { ...newRecord, type: 'accounting' }; // Set type for GAS here
                     if (accForm.value.type === 'income') {
                         recordToSend.category = recordToSend.category + ' (收入)';
                     } else {
+                        // Expense -> negative for sheet
                         recordToSend.amount = -Math.abs(recordToSend.amount);
                     }
                     
@@ -777,7 +787,6 @@
                 
                 const visibleBullpen = computed(() => {
                     if (!isBullpenExpanded.value) return bullpen.value.slice(0, 2);
-                    // Filter by month
                     return bullpen.value.filter(item => item.date.startsWith(bullpenFilterMonth.value));
                 });
 
@@ -792,14 +801,18 @@
 
                 const toggleExpand = () => isExpanded.value = !isExpanded.value;
                 
+                // Computed for filtered records (Enhanced Safety)
                 const visibleRecords = computed(() => {
                     let recs = accountingRecords.value;
                     if (!isExpanded.value) return recs.slice(0, 3);
                     
                     return recs.filter(r => {
+                        // Safety first: check r exists
                         if (!r) return false;
                         
                         const inDate = r.date >= filterStartDate.value && r.date <= filterEndDate.value;
+                        
+                        // Strict string conversion for search to avoid crashes
                         const noteStr = (r.note || '').toString().toLowerCase();
                         const catStr = (r.category || '').toString().toLowerCase();
                         const sumStr = (r.summary || '').toString().toLowerCase();
@@ -807,6 +820,7 @@
                         
                         const matchQuery = noteStr.includes(query) || catStr.includes(query) || sumStr.includes(query);
                         
+                        // Filter Logic
                         let matchType = true;
                         if (filterFixed.value) {
                             matchType = r.isFixed;
@@ -820,10 +834,21 @@
                     });
                 });
                 
+                // Computed for total amount
                 const visibleTotalAmount = computed(() => {
                     return visibleRecords.value.reduce((sum, rec) => {
+                        // Income subtracts? No, total amount usually means flow.
+                        // Or net? "Total Amount" of records shown.
+                        // If mixed income/expense, simple sum might be misleading.
+                        // Let's assume standard expense sum for now, or net if mixed.
+                        // Given user asked for "Sum of filtered content", let's do algebraic sum: Income - Expense.
+                        // Actually, expense is usually positive in UX (amount spent).
+                        // If income is +2000 and expense is -100, sum is 1900?
+                        // Let's just sum the raw numbers but respect direction.
                         if (rec.type === 'income') return sum + Number(rec.amount);
-                        return sum - Number(rec.amount); 
+                        return sum - Number(rec.amount); // Expense subtracts from "Total" view or just sum absolute?
+                        // "加總金額" usually implies "How much money involved".
+                        // Let's stick to Net Flow.
                     }, 0);
                 });
 
@@ -843,7 +868,7 @@
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     // Bullpen view logic
                     isBullpenExpanded, toggleBullpenExpand, bullpenFilterMonth, visibleBullpen,
-                    onCodeBlur, formatCurrency, getProfitClass
+                    onCodeBlur, formatCurrency, getProfitClass, saveSettings
                 };
             }
         }).mount('#app');
