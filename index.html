@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MeowMoney 智慧理財</title>
+    <title>MeowMoney</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
@@ -185,12 +185,9 @@
                                     <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { hideFixed = false; filterGeneral = false; filterBank = ''; filterCategory = ''; }" class="accent-earth-green w-4 h-4">
                                     僅固定帳單
                                 </label>
+                                <!-- Removed "Hide Fixed" as requested -->
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="hideFixed" @change="if(hideFixed) { filterFixed = false; filterGeneral = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
-                                    不顯示固定消費
-                                </label>
-                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; hideFixed = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; filterBank = ''; filterCategory = ''; }" class="accent-earth-green w-4 h-4">
                                     僅一般消費
                                 </label>
                                 <!-- Bank Filter Dropdown -->
@@ -828,7 +825,7 @@
                 const filterStartDate = ref(defaultStart);
                 const filterEndDate = ref(defaultEnd);
                 const filterFixed = ref(false);
-                const hideFixed = ref(false);
+                const hideFixed = ref(false); // Removed functionality, but keeping ref to avoid breaking if referenced
                 const filterGeneral = ref(false);
                 const filterBank = ref(''); // Bank filter state
 
@@ -860,10 +857,10 @@
                         let matchType = true;
                         if (filterFixed.value) {
                             matchType = r.isFixed;
-                        } else if (hideFixed.value) {
-                            matchType = !r.isFixed;
                         } else if (filterGeneral.value) {
                             matchType = r.type === 'expense' && !r.isFixed;
+                        } else if (filterCategory.value) { // Category Filter Logic
+                             matchType = r.category === filterCategory.value;
                         }
                         
                         // Bank Filter
@@ -871,14 +868,8 @@
                         if (filterBank.value) {
                             matchBank = r.bankName === filterBank.value;
                         }
-                        
-                        // Category Filter (NEW)
-                        let matchCategory = true;
-                        if (filterCategory.value) {
-                            matchCategory = r.category === filterCategory.value;
-                        }
 
-                        return inDate && matchQuery && matchType && matchBank && matchCategory;
+                        return inDate && matchQuery && matchType && matchBank;
                     });
                 });
                 
@@ -893,8 +884,9 @@
                 
                 // Available Categories
                 const availableCategories = computed(() => {
-                    const cats = new Set(); // Sourced from accountingRecords only
+                    const cats = new Set(); 
                     accountingRecords.value.forEach(r => {
+                        // Only add existing categories in records
                         if(r.category) cats.add(r.category);
                     });
                     return Array.from(cats);
