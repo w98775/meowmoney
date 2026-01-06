@@ -183,11 +183,11 @@
                             <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
                                     <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { filterGeneral = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
-                                    只顯示固定帳單
+                                    僅固定帳單
                                 </label>
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
                                     <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
-                                    只顯示一般消費
+                                    僅一般消費
                                 </label>
                                 <!-- Bank Filter Dropdown -->
                                 <div class="flex items-center gap-1">
@@ -195,6 +195,14 @@
                                     <select v-model="filterBank" @change="if(filterBank) { filterFixed = false; filterGeneral = false; }" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
                                         <option value="">全部</option>
                                         <option v-for="bank in availableBanks" :value="bank">{{ bank }}</option>
+                                    </select>
+                                </div>
+                                <!-- Category Filter Dropdown -->
+                                <div class="flex items-center gap-1">
+                                    <span class="whitespace-nowrap">類別:</span>
+                                    <select v-model="filterCategory" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
+                                        <option value="">全部</option>
+                                        <option v-for="cat in availableCategories" :value="cat">{{ cat }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -479,6 +487,7 @@
                 const newCategoryNameEdit = ref('');
                 const newCatInputEdit = ref(null);
                 const currentEditCategories = computed(() => editForm.value.type === 'income' ? incomeCategories.value : expenseCategories.value);
+                const filterCategory = ref('');
 
                 const setRecordType = (type) => {
                     accForm.value.type = type;
@@ -486,18 +495,7 @@
                 };
                 
                 const saveSettings = () => {
-                   if(googleSheetUrl.value && !isOffline.value) {
-                       fetch(googleSheetUrl.value, {
-                           method: 'POST',
-                           mode: 'no-cors',
-                           headers: {'Content-Type': 'application/json'},
-                           body: JSON.stringify({
-                               type: 'settings',
-                               baseIncome: baseIncome.value,
-                               investedCapital: investedCapital.value
-                           })
-                       }).catch(console.error);
-                   }
+                   // No inputs to trigger this anymore
                 };
 
                 const processFixedExpenses = async () => {
@@ -882,6 +880,15 @@
                     });
                     return Array.from(banks);
                 });
+                
+                // Available Categories
+                const availableCategories = computed(() => {
+                    const cats = new Set([...expenseCategories.value, ...incomeCategories.value]);
+                    accountingRecords.value.forEach(r => {
+                        if(r.category) cats.add(r.category);
+                    });
+                    return Array.from(cats);
+                });
 
                 // Computed for total amount
                 const visibleTotalAmount = computed(() => {
@@ -916,7 +923,7 @@
                     categories, isAddingCategory, newCategoryName, newCatInput, checkCategory, confirmNewCategory, currentCategories, currentEditCategories,
                     accForm, accountingRecords, visibleRecords, visibleTotalAmount, addAccounting, deleteAccounting, dailyIncome, dailyBalance, baseIncome, totalMonthlyIncome,
                     showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit, setRecordType,
-                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, hideFixed, filterGeneral, filterBank, availableBanks, expenseRecordsCount,
+                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, hideFixed, filterGeneral, filterBank, availableBanks, expenseRecordsCount, filterCategory, availableCategories,
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     // Bullpen view logic
                     isBullpenExpanded, toggleBullpenExpand, bullpenFilterMonth, visibleBullpen,
