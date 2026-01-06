@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MeowMoney</title>
+    <title>MeowMoney 智慧理財</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
@@ -125,6 +125,7 @@
                                 <div>
                                     <label class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1 block">當月總收入 (預設+新增)</label>
                                     <div class="flex items-center gap-1">
+                                        <!-- Removed duplicate '$' symbol and removed baseIncome input -->
                                         <span class="text-2xl font-mono font-bold text-stone-700">{{ formatCurrency(totalMonthlyIncome) }}</span>
                                     </div>
                                 </div>
@@ -162,7 +163,12 @@
                                 <div><input type="text" v-model="accForm.summary" placeholder="摘要 (內容說明)..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent"></div>
                                 <div class="bg-stone-50 p-2 rounded-lg border border-stone-100">
                                     <div class="flex gap-2 mb-2"><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="cash" class="accent-stone-700"> 現金</label><label class="flex items-center gap-1 text-xs md:text-sm cursor-pointer"><input type="radio" v-model="accForm.paymentType" value="card" class="accent-earth-accent"> 信用卡</label></div>
-                                    <div v-if="accForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="accForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-earth-accent"></div>
+                                    <div v-if="accForm.paymentType === 'card'" class="mb-2">
+                                        <input type="text" v-model="accForm.bankName" list="bank-list-add" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-earth-accent">
+                                        <datalist id="bank-list-add">
+                                            <option v-for="bank in builtInBanks" :value="bank"></option>
+                                        </datalist>
+                                    </div>
                                     <label class="flex items-center gap-2 text-xs md:text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="accForm.isFixed" class="accent-earth-green w-3 h-3"> <span>固定花費 (自動延續)</span></label>
                                 </div>
                                 <div><input type="text" v-model="accForm.note" placeholder="備註..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-earth-accent mb-3">
@@ -178,17 +184,21 @@
                             <div class="flex gap-2 items-center text-xs md:text-sm text-stone-500"><span>日期:</span><input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"><span>-</span><input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"></div>
                             <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { hideFixed = false; filterGeneral = false; }" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { hideFixed = false; filterGeneral = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
                                     只顯示固定帳單
                                 </label>
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="hideFixed" @change="if(hideFixed) { filterFixed = false; filterGeneral = false; }" class="accent-earth-green w-4 h-4">
-                                    不顯示固定消費
-                                </label>
-                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; hideFixed = false; }" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; hideFixed = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
                                     只顯示一般消費
                                 </label>
+                                <!-- Bank Filter Dropdown -->
+                                <div class="flex items-center gap-1">
+                                    <span class="whitespace-nowrap">銀行:</span>
+                                    <select v-model="filterBank" @change="if(filterBank) { filterFixed = false; filterGeneral = false; }" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
+                                        <option value="">全部</option>
+                                        <option v-for="bank in availableBanks" :value="bank">{{ bank }}</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div v-if="visibleRecords.length === 0" class="text-center py-6 border-2 border-dashed border-stone-200 rounded-xl"><p class="text-stone-400 text-sm">目前沒有記帳資料</p></div>
@@ -355,7 +365,11 @@
                             </div>
                             <div class="bg-stone-50 p-3 rounded-lg border border-stone-100">
                                 <div class="flex gap-3 mb-2"><label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" v-model="editForm.paymentType" value="cash" class="accent-stone-700"> 現金</label><label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" v-model="editForm.paymentType" value="card" class="accent-earth-green"> 信用卡</label></div>
-                                <div v-if="editForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="editForm.bankName" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1.5 text-sm outline-none focus:border-earth-green"></div>
+                                <div v-if="editForm.paymentType === 'card'" class="mb-2"><input type="text" v-model="editForm.bankName" list="bank-list-edit" placeholder="銀行名稱" class="w-full bg-white border border-stone-200 rounded px-2 py-1.5 text-sm outline-none focus:border-earth-green">
+                                    <datalist id="bank-list-edit">
+                                        <option v-for="bank in builtInBanks" :value="bank"></option>
+                                    </datalist>
+                                </div>
                                 <div class="flex items-center justify-between">
                                     <label class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="editForm.isFixed" class="accent-earth-green w-4 h-4"> <span>固定花費 (自動延續)</span></label>
                                     <label class="flex items-center gap-2 text-sm text-stone-600 cursor-pointer"><input type="checkbox" v-model="editForm.isCountInThisMonth" class="accent-earth-green w-4 h-4"> <span class="text-earth-accent font-bold">計入本月</span></label>
@@ -389,6 +403,7 @@
                     return new Date(d.getTime() - offset).toISOString().split('T')[0];
                 };
                 
+                // --- Date Helper for Current Month Default ---
                 const getMonthRange = () => {
                     const date = new Date();
                     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -418,6 +433,7 @@
 
                 const expenseCategories = ref(['餐費', '交通', '購物', '娛樂', '居住', '慈善', '家人', '生活', '保險', '其他']);
                 const incomeCategories = ref(['薪資', '加班費', '獎金', '投資', '其他']);
+                const builtInBanks = ['國泰', '台新', '星展'];
                 
                 const isAddingCategory = ref(false);
                 const newCategoryName = ref('');
@@ -763,11 +779,15 @@
 
                 const editBullpen = (item) => { editingBullpenId.value = item.id; bullForm.value = { ...item }; window.scrollTo({ top: 0, behavior: 'smooth' }); };
                 const cancelBullpenEdit = () => { editingBullpenId.value = null; bullForm.value = { code: '', name: '', date: currentDate.value, investedAmount: null, buyAvg: null, sellAvg: null, avgProfit: null, profit: null }; };
-                const deleteBullpen = (idx) => {
+                
+                const deleteBullpen = (id) => {
                     if(confirm('刪除？')) {
-                        const item = bullpen.value[idx];
-                        bullpen.value.splice(idx, 1);
-                        if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: item.id, type: 'bullpen' }) }).catch(e => console.error(e)); }
+                        const idx = bullpen.value.findIndex(item => item.id === id);
+                        if (idx !== -1) {
+                            const item = bullpen.value[idx];
+                            bullpen.value.splice(idx, 1);
+                            if(googleSheetUrl.value && !isOffline.value) { fetch(googleSheetUrl.value, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: item.id, type: 'bullpen' }) }).catch(e => console.error(e)); }
+                        }
                     }
                 };
 
@@ -786,6 +806,7 @@
                 const filterFixed = ref(false);
                 const hideFixed = ref(false);
                 const filterGeneral = ref(false);
+                const filterBank = ref(''); // Bank filter state
 
                 const toggleExpand = () => isExpanded.value = !isExpanded.value;
                 
@@ -818,10 +839,25 @@
                             matchType = r.type === 'expense' && !r.isFixed;
                         }
                         
-                        return inDate && matchQuery && matchType;
+                        // Bank Filter
+                        let matchBank = true;
+                        if (filterBank.value) {
+                            matchBank = r.bankName === filterBank.value;
+                        }
+
+                        return inDate && matchQuery && matchType && matchBank;
                     });
                 });
                 
+                // Available Banks for Filter
+                const availableBanks = computed(() => {
+                    const banks = new Set(builtInBanks); // Start with built-ins
+                    accountingRecords.value.forEach(r => {
+                        if (r.bankName) banks.add(r.bankName);
+                    });
+                    return Array.from(banks);
+                });
+
                 // Computed for total amount
                 const visibleTotalAmount = computed(() => {
                     return visibleRecords.value.reduce((sum, rec) => {
@@ -855,11 +891,11 @@
                     categories, isAddingCategory, newCategoryName, newCatInput, checkCategory, confirmNewCategory, currentCategories, currentEditCategories,
                     accForm, accountingRecords, visibleRecords, visibleTotalAmount, addAccounting, deleteAccounting, dailyIncome, dailyBalance, baseIncome, totalMonthlyIncome,
                     showEditModal, editForm, openEditModal, closeEditModal, updateAccounting, isAddingCategoryEdit, newCategoryNameEdit, newCatInputEdit, checkCategoryEdit, confirmNewCategoryEdit, setRecordType,
-                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, hideFixed, filterGeneral, expenseRecordsCount,
+                    isExpanded, toggleExpand, searchQuery, filterStartDate, filterEndDate, filterFixed, hideFixed, filterGeneral, filterBank, availableBanks, expenseRecordsCount,
                     investedCapital, bullForm, bullpen, bullpenStats, addBullpen, deleteBullpen, editingBullpenId, editBullpen, updateBullpen, cancelBullpenEdit,
                     // Bullpen view logic
                     isBullpenExpanded, toggleBullpenExpand, bullpenFilterMonth, visibleBullpen,
-                    onCodeBlur, formatCurrency, getProfitClass, saveSettings
+                    onCodeBlur, formatCurrency, getProfitClass, saveSettings, builtInBanks
                 };
             }
         }).mount('#app');
