@@ -176,23 +176,27 @@
                     </div>
 
                     <div class="md:col-span-7 space-y-3">
-                        <div class="flex items-center justify-between px-1"><h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider">近期紀錄</h3><button @click="toggleExpand" class="text-xs md:text-sm text-earth-accent font-bold hover:underline">{{ isExpanded ? '收合' : '展開/搜尋' }}</button></div>
+                        <div class="flex items-center justify-between px-1"><h3 class="text-xs md:text-sm font-bold text-stone-500 uppercase tracking-wider">近期紀錄</h3><button @click="toggleExpand" class="text-xs md:text-sm text-earth-accent font-bold hover:underline">{{ isExpanded ? '收合' : '展開/篩選' }}</button></div>
                         <div v-if="isExpanded" class="bg-stone-100 p-3 rounded-xl space-y-2 animate-fade-in border border-stone-200">
                             <div class="flex gap-2"><input type="text" v-model="searchQuery" placeholder="搜尋備註或類別..." class="flex-1 bg-white border border-stone-300 rounded px-2 py-1 text-xs md:text-sm"></div>
                             <div class="flex gap-2 items-center text-xs md:text-sm text-stone-500"><span>日期:</span><input type="date" v-model="filterStartDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"><span>-</span><input type="date" v-model="filterEndDate" class="bg-white border border-stone-300 rounded px-1 py-0.5"></div>
                             <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-stone-500 mt-2 border-t border-stone-200 pt-2">
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { filterGeneral = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="filterFixed" @change="if(filterFixed) { hideFixed = false; filterGeneral = false; filterBank = ''; filterCategory = ''; }" class="accent-earth-green w-4 h-4">
                                     僅固定帳單
                                 </label>
                                 <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
-                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
+                                    <input type="checkbox" v-model="hideFixed" @change="if(hideFixed) { filterFixed = false; filterGeneral = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
+                                    不顯示固定消費
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer hover:text-stone-700">
+                                    <input type="checkbox" v-model="filterGeneral" @change="if(filterGeneral) { filterFixed = false; hideFixed = false; filterBank = ''; }" class="accent-earth-green w-4 h-4">
                                     僅一般消費
                                 </label>
                                 <!-- Bank Filter Dropdown -->
                                 <div class="flex items-center gap-1">
                                     <span class="whitespace-nowrap">銀行:</span>
-                                    <select v-model="filterBank" @change="if(filterBank) { filterFixed = false; filterGeneral = false; }" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
+                                    <select v-model="filterBank" @change="if(filterBank) { filterFixed = false; filterGeneral = false; filterCategory = ''; }" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
                                         <option value="">全部</option>
                                         <option v-for="bank in availableBanks" :value="bank">{{ bank }}</option>
                                     </select>
@@ -200,7 +204,7 @@
                                 <!-- Category Filter Dropdown -->
                                 <div class="flex items-center gap-1">
                                     <span class="whitespace-nowrap">類別:</span>
-                                    <select v-model="filterCategory" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
+                                    <select v-model="filterCategory" @change="if(filterCategory) { filterFixed = false; filterGeneral = false; filterBank = ''; }" class="bg-white border border-stone-300 rounded px-1 py-0.5 text-xs outline-none max-w-[100px]">
                                         <option value="">全部</option>
                                         <option v-for="cat in availableCategories" :value="cat">{{ cat }}</option>
                                     </select>
@@ -867,8 +871,14 @@
                         if (filterBank.value) {
                             matchBank = r.bankName === filterBank.value;
                         }
+                        
+                        // Category Filter (NEW)
+                        let matchCategory = true;
+                        if (filterCategory.value) {
+                            matchCategory = r.category === filterCategory.value;
+                        }
 
-                        return inDate && matchQuery && matchType && matchBank;
+                        return inDate && matchQuery && matchType && matchBank && matchCategory;
                     });
                 });
                 
@@ -883,7 +893,7 @@
                 
                 // Available Categories
                 const availableCategories = computed(() => {
-                    const cats = new Set([...expenseCategories.value, ...incomeCategories.value]);
+                    const cats = new Set(); // Sourced from accountingRecords only
                     accountingRecords.value.forEach(r => {
                         if(r.category) cats.add(r.category);
                     });
