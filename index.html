@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MeowMoney</title>
+    <title>MeowMoney 智慧理財</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -18,6 +20,10 @@
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         
+        /* Modal Scale Animation */
+        .scale-enter-active, .scale-leave-active { transition: all 0.2s ease; }
+        .scale-enter-from, .scale-leave-to { opacity: 0; transform: scale(0.95); }
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f5f5f4; }
@@ -102,7 +108,7 @@
                 <div class="bg-stone-800 rounded-2xl p-4 text-stone-100 shadow-lg flex justify-between items-center">
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">已投入成本</p>
-                        <div class="flex items-center gap-1"><span class="text-stone-500 text-lg">$</span><span class="text-xl md:text-2xl font-mono font-bold text-white">{{ formatCurrency(investedCapital) }}</span></div>
+                        <div class="flex items-center gap-1"><span class="text-xl md:text-2xl font-mono font-bold text-white">{{ formatCurrency(investedCapital) }}</span></div>
                     </div>
                     <div class="text-right">
                         <p class="text-[10px] md:text-xs font-bold text-earth-accent uppercase tracking-wider mb-1">目前已賺 (總獲利)</p>
