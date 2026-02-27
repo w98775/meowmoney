@@ -1,5 +1,5 @@
 {
-  "name": "Empty Project",
-  "description": "A completely empty project state.",
+  "name": "MeowMoney 智慧理財",
+  "description": "一個簡潔的理財追蹤工具，支援 Google Sheet 同步與牛棚紀錄管理。",
   "requestFramePermissions": []
 }
